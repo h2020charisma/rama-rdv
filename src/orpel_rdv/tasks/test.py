@@ -5,7 +5,7 @@ root_data_folder = None
 input_files = None
 standard_files = None
 reference_files = None
-calibration_files = None
+calibration_file = None
 # -
 
 # https://github.com/mr-sheg/orpl/tree/main/demos
@@ -22,36 +22,52 @@ from orpl.baseline_removal import imodpoly
 from orpl.baseline_removal import bubblefill
 from orpl.calibration import nm2icm, icm2nm
 from orpl.calibration import find_npeaks
+from orpl.calibration import xaxis_from_ref
 
 
-def reference_spectra(reference_files):
+def reference_spectra(reference_files, wavelength=785):
     from orpl.calibration import nm2icm, icm2nm
+    res = []
+    for ref in reference_files:
+        data = np.genfromtxt(ref, delimiter=',')
+        xaxis = data[1:, 0]
+        ref_tylenol_x = nm2icm(xaxis, wavelength)
+        ref_tylenol_r = data[1:, 2]
+        res.append((ref_tylenol_x,ref_tylenol_r))
+    return res
 
-    # Loading reference tylenol
-    data = np.genfromtxt(reference_files[0], delimiter=',')
-
-    xaxis = data[1:, 0]
-    ref_tylenol_x = nm2icm(xaxis, 785)
-    ref_tylenol_r = data[1:, 2]
-
-    # Loading reference nylon
-    data = np.genfromtxt(reference_files[1], delimiter=',')
-
-    xaxis = data[1:, 0]
-    ref_nylon_x = nm2icm(xaxis, 785)
-    ref_nylon_r = data[1:, 2]
- 
-    return [ (ref_tylenol_x,ref_tylenol_r),(ref_nylon_x,ref_nylon_r)] 
-
-def calibration_spectra(calibration_files):
+def calibration_spectra(calibration_file,reference,label="tylenol"):
     #tbd demo5
-    pass
+    data = json.load(open(calibration_file))
+    exp_tylenol = np.stack(data[0]['RawSpectra'])
+    exp_tylenol = exp_tylenol.mean(axis=1)
+    plt.figure(figsize=[8,2])
+    plt.subplot(1,2,1)
+    plt.plot(reference[0], reference[1])
+    plt.xlabel('RS [$cm^{-1}$]')
+    plt.ylabel('I [au]')
+    plt.title('Reference {} spectrum'.format(label))
+    plt.subplot(1,2,2)
+    plt.plot(exp_tylenol)
+    plt.xlabel('Camera Pixel')
+    plt.ylabel('Raw Intensity [counts]')
+    plt.title('Experimental {} spectrum'.format(label))
+    # xaxis generation
+    xaxis = xaxis_from_ref(exp_tylenol, reference[0], reference[1], npks=7)
+    # Plotting result
+    plt.figure(figsize=[8,2])
+    plt.plot(reference[0], reference[1]/reference[1].max(), label='reference')
+    plt.plot(xaxis, exp_tylenol/exp_tylenol.max(), label='experimental')
+    plt.xlabel('RS [$cm^{-1}$]')
+    plt.ylabel('Normalized I [au]')
+    plt.legend()    
+    return xaxis
 
 
 
-input_files = os.path.abspath(os.path.join(root_data_folder,input_files))
+input_files = os.path.join(root_data_folder,input_files)
 assert(os.path.exists(input_files))
-standard_files = os.path.abspath(os.path.join(root_data_folder,standard_files))
+standard_files = os.path.join(root_data_folder,standard_files)
 assert(os.path.exists(standard_files))
 reference_file = []
 for ref in reference_files.split(","):
@@ -59,6 +75,9 @@ for ref in reference_files.split(","):
     assert(os.path.exists(tmp))  
     reference_file.append(tmp) 
 ref_spectra = reference_spectra(reference_file) 
+
+cal_spectrum = calibration_spectra(os.path.join(root_data_folder,calibration_file),ref_spectra[0])
+
 plt.figure(figsize=[12, 2])
 for idx, ref in enumerate(ref_spectra): 
     plt.subplot(1, 2, idx+1)
