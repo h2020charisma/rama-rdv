@@ -1,0 +1,11 @@
+tasks:
+  - source: tasks/test.py
+    product: 
+      nb: "products/test.ipynb"
+      data: "products/test.txt"
+    params:
+      root_data_folder: "{{root_data_folder}}"
+      input_files: "{{input_files}}"
+      standard_files: "{{standard_files}}"
+      reference_files: "{{reference_files}}"
+      calibration_files: "{{calibration_files}}"
