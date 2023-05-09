@@ -1,0 +1,7 @@
+tasks:
+  - source: tasks/bgm_peaks.py
+    product: 
+      nb: "products/bgm_peaks.ipynb"
+    params:
+      root_data_folder: "{{root_data_folder}}"
+      input_files: "{{input_files}}"
