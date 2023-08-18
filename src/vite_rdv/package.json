@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@h5web/app": "8.0.0",
+    "@h5web/h5wasm": "^8.0.0",
     "normalize.css": "8.0.1",
     "react": "17.0.2",
     "react-dom": "17.0.2"
