@@ -44,6 +44,7 @@ function TWizardUploadApp() {
 
   const handleExcelFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0] || null;
+
     setExcelFormData((prevData) => ({ ...prevData, excelFile: selectedFile }));
   };
 
@@ -51,7 +52,6 @@ function TWizardUploadApp() {
     const selectedFile = event.target.files?.[0] || null;
     setExcelFormData((prevData) => ({ ...prevData, jsonFile: selectedFile }));
   };
-
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -59,8 +59,20 @@ function TWizardUploadApp() {
       // Handle spectra upload logic here
       // ...
     } else if (uploadType === 'excel') {
-      // Handle excel upload logic here
-      // ...
+      // Access excelFormData
+      const { excelFile, jsonFile } = excelFormData;
+    
+      // Check if both excelFile and jsonFile are not null
+      if (excelFile && jsonFile) {
+        // You can use excelFile and jsonFile here for further processing
+        console.log('Excel File:', excelFile);
+        console.log('JSON File:', jsonFile);
+
+        // Perform your upload or processing logic here
+      } else {
+        // Handle error case where files are not selected
+        console.log('Please select both Excel and JSON files.');
+      }
     }
   };
 
@@ -192,6 +204,8 @@ function TWizardUploadApp() {
                   onChange={handleExcelFileChange}
                 />
               </div>
+            </div>
+            <div className="row mb-3">
               <div className="col-md-6">
                 <input
                   type="file"
