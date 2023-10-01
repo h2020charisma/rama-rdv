@@ -7,6 +7,7 @@ files_led_twinned: None
 files_spectra_reference: None
 files_spectra_twinned: None
 probe: None
+wavelength: None
 
 # -
 import os
@@ -30,6 +31,14 @@ def Y_785(x):
     x0 = 2.65628776e+3
     Y = A0 + A * np.exp(-B * (x - x0)**2)
     return Y
+
+def Y(x,wavelength=785):
+    if wavelength==785:
+        return Y_785(x)
+    elif wavelength==532:
+        return Y_532(x)
+    else:
+        raise Exception("not supported wavelength {}".format(wavelength))
 
 def spe_area(spe: rc2.spectrum.Spectrum):
     return np.sum(spe.y * np.diff(spe.x_bin_boundaries))
@@ -76,7 +85,7 @@ def intensity_normalization(row):
         spe = row["spectrum_baseline"]        
         spe_y = spe.y
         spe_y[spe_y < 0] = 0
-        Y = Y_785(spe.x)
+        _Y = Y(spe.x,wavelength)
 
         subset=row["device"]
         spe_led = led_spectra[match_led[subset]]["spectrum"]
@@ -85,7 +94,7 @@ def intensity_normalization(row):
         spe_led_sampled= spe_dist.pdf(spe.x)*area
         #print(subset,row["laser_power_percent"],len(spe.x),len(spe_led.x),spe.x==spe_led.x)
         #spe_corrected = Y*spe_y/spe_led.y
-        spe_corrected = Y*spe_y/spe_led_sampled
+        spe_corrected = _Y*spe_y/spe_led_sampled
 
         return rc2.spectrum.Spectrum(spe.x, spe_corrected)
     except Exception as err:

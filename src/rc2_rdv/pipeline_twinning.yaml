@@ -25,6 +25,7 @@ tasks:
       files_spectra_reference: "{{files_spectra_reference}}"
       files_spectra_twinned: "{{files_spectra_twinned}}"      
       probe: "Probe"
+      wavelength: 785
 
   - source: tasks/twinning_plot.py
     product: 
