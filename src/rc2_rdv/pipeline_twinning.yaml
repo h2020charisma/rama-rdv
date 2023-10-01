@@ -33,4 +33,9 @@ tasks:
     params:
       probe: "Probe"      
 
+  - source: tasks/twinning_peaks.py
+    product: 
+      nb: "products/twinning_peaks.ipynb"
+    params:
+      probe: "Probe"  
       
