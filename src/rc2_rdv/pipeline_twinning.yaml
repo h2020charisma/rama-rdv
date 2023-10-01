@@ -8,19 +8,28 @@ tasks:
       files_spectra_reference: "{{files_spectra_reference}}"
       files_spectra_twinned: "{{files_spectra_twinned}}"
   
-
-  - source: tasks/load_led.py
-    product: 
-      nb: "products/load_led_spectra.ipynb"
-    params:
-      root_data_folder: "{{root_led}}"
-      files_led_reference: "{{files_led_reference}}"      
-      files_led_twinned: "{{files_led_twinned}}"   
-
   - source: tasks/twinning_normalize.py
     product: 
       nb: "products/twinning_normalize.ipynb"
     params:
       root_data_folder: "{{root_led}}"
       probe: "Probe"
+
+  - source: tasks/twinning_intensity_normalization.py
+    product: 
+      nb: "products/twinning_intensity_normalization.ipynb"
+    params:
+      root_data_folder: "{{root_led}}"
+      files_led_reference: "{{files_led_reference}}"      
+      files_led_twinned: "{{files_led_twinned}}"   
+      files_spectra_reference: "{{files_spectra_reference}}"
+      files_spectra_twinned: "{{files_spectra_twinned}}"      
+      probe: "Probe"
+
+  - source: tasks/twinning_plot.py
+    product: 
+      nb: "products/twinning_plot.ipynb"
+    params:
+      probe: "Probe"      
+
       
