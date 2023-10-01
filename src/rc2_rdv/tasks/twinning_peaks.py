@@ -9,6 +9,7 @@ import pandas as pd
 from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
 import ramanchada2 as rc2
+import numpy as np
 
 def calc_peak_amplitude(spe,peak=144,prominence=0.01):
     try:
@@ -81,9 +82,27 @@ def harmonization(row):
     except Exception as err:
         print(err)
         return None
-
+#only twinned is multiplied
 devices.loc[twinned_condition,"spectrum_harmonized"] = devices.loc[twinned_condition].apply(harmonization,axis=1)
 devices.to_hdf(devices_h5file, key='devices', mode='w')
+
+
+
+def spe_area(row):
+    try:
+        spe = row["spectrum_harmonized"]
+        return np.sum(spe.y * np.diff(spe.x_bin_boundaries))
+    except:
+        return None
+
+devices.loc[reference_condition,"area"] = devices.loc[reference_condition].apply(spe_area,axis=1)
+devices.loc[reference_condition][["reference","device","laser_power","area"]]
+
+devices.loc[twinned_condition,"area"] = devices.loc[twinned_condition].apply(spe_area,axis=1)   
+devices.loc[twinned_condition][["reference","device","laser_power","area"]]
+
+devices.to_hdf(devices_h5file, key='devices', mode='w')
+
 
 import matplotlib.pyplot as plt
 def plot_spectra(row):
@@ -108,3 +127,4 @@ devices.loc[twinned_condition].apply(plot_spectra, axis=1)
 fig, axes = plt.subplots(2, 1, figsize=(15, 6))      
 axes[1].set_title("harmonized")
 devices.loc[reference_condition].apply(plot_spectra, axis=1)
+ 
