@@ -19,31 +19,33 @@ def plot_spectra(row):
     except:
         pass
     try:
-        row["spectrum_normalized"].plot(ax=axes[1],label="{}%".format(row["laser_power_percent"]))
+        row["spectrum_baseline"].plot(ax=axes[1],label="{}%".format(row["laser_power_percent"]))
     except:
         pass
     try:
-        row["spectrum_baseline"].plot(ax=axes[2],label="{}%".format(row["laser_power_percent"]))
+        sc=row["spectrum_baseline"]
+        sc = sc.trim_axes(method='x-axis', boundaries=(60, 300))
+        sc.plot(ax=axes[2],label="{}%".format(row["laser_power_percent"]))
     except:
-        pass
+        pass    
     try:
         sc =row["spectrum_corrected"]
-        sc = sc.trim_axes(method='x-axis', boundaries=(60, 300))
+        sc = sc.trim_axes(method='x-axis', boundaries=(65, 300))
         sc.plot(ax=axes[3],label="{}%".format(row["laser_power_percent"]))
     except:
         pass    
     axes[0].set_title("{} {}".format(row["device"],row["probe"]))
     
 fig, axes = plt.subplots(1, 4, figsize=(15, 2))      
-axes[1].set_title("normalized")
-axes[2].set_title("normalized + baseline")
+axes[1].set_title("normalized + baseline")
+axes[2].set_title("normalized + baseline (cropped)")
 axes[3].set_title("LED corrected")
 twinned_condition = (~devices["reference"]) & (devices["probe"] == probe)
 devices.loc[twinned_condition].apply(plot_spectra, axis=1)
 
 fig, axes = plt.subplots(1, 4, figsize=(15, 2))  
-axes[1].set_title("normalized")
-axes[2].set_title("baseline")
+axes[1].set_title("baseline")
+axes[2].set_title("baseline (cropped)")
 axes[3].set_title("LED corrected")
 reference_condition = (devices["reference"]) & (devices["probe"] == probe)
 devices.loc[reference_condition].apply(plot_spectra, axis=1)

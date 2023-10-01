@@ -31,9 +31,12 @@ def Y_785(x):
     Y = A0 + A * np.exp(-B * (x - x0)**2)
     return Y
 
+def spe_area(spe: rc2.spectrum.Spectrum):
+    return np.sum(spe.y * np.diff(spe.x_bin_boundaries))
+
 def load_led(root_led=root_data_folder,folder_path_led=[files_led_reference,files_led_twinned],
              filter_filename=r'^(LED|NIR)',filter_probe="Probe"):
-    led_spectra={}
+    led_spectra={ }
     for subset in folder_path_led:
         print(subset)
         for filename in os.listdir(os.path.join(root_led,subset)):
@@ -50,7 +53,7 @@ def load_led(root_led=root_data_folder,folder_path_led=[files_led_reference,file
                 spe_led_y = spe_led.y
                 spe_led_y[spe_led_y < 0] = 0
                 spe_led.y = spe_led_y
-                led_spectra[subset]=spe_led
+                led_spectra[subset]={"spectrum" : spe_led, "spe_dist" :  spe_led.spe_distribution(),"area"  : spe_area(spe_led) }
     return led_spectra
 led_spectra = load_led(root_led=root_data_folder,folder_path_led=[files_led_reference,files_led_twinned],filter_filename=r'^(LED|NIR)',filter_probe="Probe")
 led_spectra.keys()
@@ -67,15 +70,23 @@ match_led
 
 def intensity_normalization(row):
     try:
-        subset=row["device"]
-        spe_led = led_spectra[match_led[subset]]
-        Y = Y_785(spe_led.x)
 
+        ##    _x=  np.arange(0,300,0.1)
+        #spe_sampled= rc2.spectrum.Spectrum(_x,spe_dist.pdf(_x)*area)
         spe = row["spectrum_baseline"]        
         spe_y = spe.y
         spe_y[spe_y < 0] = 0
-        print(subset,row["laser_power_percent"],len(spe.x),len(spe_led.x))
-        spe_corrected = Y*spe_y/spe_led.y
+        Y = Y_785(spe.x)
+
+        subset=row["device"]
+        spe_led = led_spectra[match_led[subset]]["spectrum"]
+        spe_dist = led_spectra[match_led[subset]]["spe_dist"]
+        area = led_spectra[match_led[subset]]["area"]
+        spe_led_sampled= spe_dist.pdf(spe.x)*area
+        #print(subset,row["laser_power_percent"],len(spe.x),len(spe_led.x),spe.x==spe_led.x)
+        #spe_corrected = Y*spe_y/spe_led.y
+        spe_corrected = Y*spe_y/spe_led_sampled
+
         return rc2.spectrum.Spectrum(spe.x, spe_corrected)
     except Exception as err:
         print(err)
