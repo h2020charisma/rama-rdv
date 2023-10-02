@@ -121,3 +121,13 @@ print(devices.columns)
 # Assert that the DataFrame contains the expected columns
 assert set(["spectrum_corrected"]).issubset(devices.columns), "a processed spectrum column is missing"
 
+
+
+for led in led_spectra:
+    fig, axes = plt.subplots(1, 3, figsize=(15, 2))   
+    spe_led = led_spectra[led]["spectrum"]   
+    spe_led.plot(label=led,ax=axes[0])
+    area = led_spectra[led]["area"]
+    spe_dist = led_spectra[led]["spe_dist"]
+    axes[1].plot(spe_led.x,spe_dist.pdf(spe_led.x))
+    axes[2].plot(spe_led.x,spe_dist.pdf(spe_led.x)*area)
