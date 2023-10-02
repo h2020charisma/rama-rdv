@@ -11,6 +11,9 @@ import matplotlib.pyplot as plt
 import ramanchada2 as rc2
 import numpy as np
 
+spectra2process="spectrum_corrected"
+spectra2process="spectrum_baseline"
+
 def calc_peak_amplitude(spe,peak=144,prominence=0.01):
     try:
         spe = spe.trim_axes(method='x-axis', boundaries=(65, 300))
@@ -39,7 +42,7 @@ devices.head()
 
 #peaks
 reference_condition = (devices["reference"]) & (devices["probe"] == probe)
-devices.loc[reference_condition ,"amplitude"] = devices.loc[(devices["reference"]) ]["spectrum_corrected"].apply(calc_peak_amplitude)
+devices.loc[reference_condition ,"amplitude"] = devices.loc[(devices["reference"]) ][spectra2process].apply(calc_peak_amplitude)
 devices.to_hdf(devices_h5file, key='devices', mode='w')
 
 #regression
@@ -51,7 +54,7 @@ devices.loc[reference_condition][["reference","device","laser_power","amplitude"
 
 #peaks
 twinned_condition = (~devices["reference"]) & (devices["probe"] == probe)
-devices.loc[twinned_condition,"amplitude"] = devices.loc[twinned_condition]["spectrum_corrected"].apply(calc_peak_amplitude)
+devices.loc[twinned_condition,"amplitude"] = devices.loc[twinned_condition][spectra2process].apply(calc_peak_amplitude)
 devices.to_hdf(devices_h5file, key='devices', mode='w')
 
 #regression
@@ -64,8 +67,8 @@ devices.loc[twinned_condition][["reference","device","laser_power","amplitude"]]
 
 A = devices.loc[reference_condition]
 B = devices.loc[twinned_condition]
-plt.plot(A["laser_power"],A["amplitude"],'o',label="A")
-plt.plot(B["laser_power"],B["amplitude"],'+',label="B")
+plt.plot(A["laser_power"],A["amplitude"],'o',label=A["device"].unique())
+plt.plot(B["laser_power"],B["amplitude"],'+',label=B["device"].unique())
 plt.legend()
 
 #Factor correction (FC) is obtained by dividing the slope of the reference equipment (spectrometer A) 
@@ -78,7 +81,7 @@ print(slope_A,slope_B,factor_correction)
 
 def harmonization(row):
     try:
-        spe = row["spectrum_corrected"]       
+        spe = row[spectra2process]       
         return rc2.spectrum.Spectrum(spe.x, spe.y *factor_correction)
     except Exception as err:
         print(err)
@@ -97,10 +100,10 @@ def spe_area(spe):
         print(err)
         return None
 
-devices.loc[reference_condition,"area"] = devices.loc[reference_condition]["spectrum_corrected"].apply(spe_area)
+devices.loc[reference_condition,"area"] = devices.loc[reference_condition][spectra2process].apply(spe_area)
 devices.loc[reference_condition][["reference","device","laser_power","area"]]
 
-devices.loc[twinned_condition,"area"] = devices.loc[twinned_condition]["spectrum_corrected"].apply(spe_area)   
+devices.loc[twinned_condition,"area"] = devices.loc[twinned_condition][spectra2process].apply(spe_area)   
 devices.loc[twinned_condition,"area_harmonized"] = devices.loc[twinned_condition]["spectrum_harmonized"].apply(spe_area)   
 devices.loc[twinned_condition][["reference","device","laser_power","area","area_harmonized"]]
 
@@ -108,16 +111,18 @@ devices.to_hdf(devices_h5file, key='devices', mode='w')
 
 
 import matplotlib.pyplot as plt
-def plot_spectra(row):
+def plot_spectra(row,boundaries=(100, 1750)):
     try:
-        sc =row["spectrum_corrected"]
-        sc = sc.trim_axes(method='x-axis', boundaries=(100, 1750))        
+        sc =row[spectra2process]
+        if boundaries:
+            sc = sc.trim_axes(method='x-axis', boundaries=boundaries)        
         sc.plot(ax=axes[0],label="{}%".format(row["laser_power_percent"]))
     except:
         pass
     try:
         sc =row["spectrum_harmonized"]
-        sc = sc.trim_axes(method='x-axis', boundaries=(100, 1750))
+        if boundaries:
+            sc = sc.trim_axes(method='x-axis', boundaries=boundaries)
         sc.plot(ax=axes[1],label="{}%".format(row["laser_power_percent"]))
     except:
         pass    

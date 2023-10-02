@@ -3,6 +3,7 @@ upstream = ["load_spectra"]
 product = None
 root_data_folder: None
 probe: None
+moving_minimum_window = 8
 # -
 
 import pandas as pd
@@ -17,7 +18,7 @@ def score_laserpower(reference,twinned):
     #display(merged_df)
     return merged_df['score'].values
 
-def baseline_spectra(spe,window=32):
+def baseline_spectra(spe,window=moving_minimum_window):
     #spe =  row["spectrum_normalized"]
     return spe - spe.moving_minimum(window)
 
@@ -49,10 +50,15 @@ print(devices.columns)
 assert set(["score"]).issubset(devices.columns), "score column is missing"
 
 #normalisation
-devices["spectrum_baseline"] = devices["spectrum"].apply(baseline_spectra)
+#devices["spectrum_baseline"] = devices["spectrum"].apply(baseline_spectra)
 twinned_condition = (~devices["reference"]) & pd.notna(devices["score"])
 devices.loc[twinned_condition, "spectrum_normalized"] = devices.loc[twinned_condition].apply(normalize_spectra, axis=1)
 devices.loc[twinned_condition, "spectrum_baseline"] = devices.loc[twinned_condition]["spectrum_normalized"].apply(baseline_spectra)
+
+devices.loc[reference_condition, "spectrum_normalized"] = devices.loc[reference_condition].apply(normalize_spectra, axis=1)
+devices.loc[reference_condition, "spectrum_baseline"] = devices.loc[reference_condition]["spectrum_normalized"].apply(baseline_spectra)
+
+devices.loc[twinned_condition | reference_condition][["device","score","laser_power","laser_power_percent"]]
 
 print(devices.columns)
 # Assert that the DataFrame contains the expected columns

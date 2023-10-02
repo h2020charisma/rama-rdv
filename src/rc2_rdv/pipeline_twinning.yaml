@@ -15,6 +15,7 @@ tasks:
     params:
       root_data_folder: "{{root_led}}"
       probe: "Probe"
+      moving_minimum_window: 10
 
   - source: tasks/twinning_intensity_normalization.py
     product: 
@@ -28,6 +29,7 @@ tasks:
       files_spectra_twinned: "{{files_spectra_twinned}}"      
       probe: "Probe"
       wavelength: 785
+      moving_minimum_window: 10      
 
   - source: tasks/twinning_plot.py
     product: 

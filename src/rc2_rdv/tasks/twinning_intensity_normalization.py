@@ -8,6 +8,7 @@ files_spectra_reference: None
 files_spectra_twinned: None
 probe: None
 wavelength: None
+moving_minimum_window: 10
 
 # -
 import os
@@ -82,7 +83,7 @@ def intensity_normalization(row):
 
         ##    _x=  np.arange(0,300,0.1)
         #spe_sampled= rc2.spectrum.Spectrum(_x,spe_dist.pdf(_x)*area)
-        spe = row["spectrum_baseline"]        
+        spe = row["spectrum_normalized"]        
         spe_y = spe.y
         spe_y[spe_y < 0] = 0
         _Y = Y(spe.x,wavelength)
@@ -103,6 +104,9 @@ def intensity_normalization(row):
         print(err)
         return None
 
+def baseline_spectra(spe,window=moving_minimum_window):
+    #spe =  row["spectrum_normalized"]
+    return spe - spe.moving_minimum(window)
 
 devices_h5file= upstream["twinning_normalize"]["data"]
 devices = pd.read_hdf(devices_h5file, "devices")
@@ -111,10 +115,12 @@ devices.head()
 
 twinned_condition = (~devices["reference"]) & (devices["probe"] == probe)
 devices.loc[twinned_condition, "spectrum_corrected"] = devices.loc[twinned_condition].apply(intensity_normalization,axis=1)
+devices.loc[twinned_condition, "spectrum_baseline"] = devices.loc[twinned_condition]["spectrum_corrected"].apply(baseline_spectra)
 devices.to_hdf(devices_h5file, key='devices', mode='w')
 
 reference_condition = (devices["reference"]) & (devices["probe"] == probe)
 devices.loc[reference_condition, "spectrum_corrected"] = devices.loc[reference_condition].apply(intensity_normalization,axis=1)
+devices.loc[reference_condition, "spectrum_baseline"] = devices.loc[reference_condition]["spectrum_corrected"].apply(baseline_spectra)
 devices.to_hdf(devices_h5file, key='devices', mode='w')
 
 print(devices.columns)
