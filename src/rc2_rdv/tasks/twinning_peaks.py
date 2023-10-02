@@ -43,7 +43,7 @@ devices.loc[reference_condition ,"amplitude"] = devices.loc[(devices["reference"
 devices.to_hdf(devices_h5file, key='devices', mode='w')
 
 #regression
-A= devices.loc[devices["reference"],["reference","laser_power","amplitude"]]
+A= devices.loc[reference_condition,["reference","laser_power","amplitude"]]
 (intercept_A,slope_A) = calc_regression(A[["laser_power"]],A["amplitude"])
 #devices.loc[reference_condition,"slope"]
 #devices.to_hdf(devices_h5file, key='devices', mode='w')
