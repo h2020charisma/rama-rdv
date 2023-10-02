@@ -22,14 +22,14 @@ def baseline_spectra(spe,window=32):
     return spe - spe.moving_minimum(window)
 
 def normalize_spectra(row):
-    return row["spectrum"] / row["score"]
+    return row["spectrum"] * row["score"]
 
 devices_h5file= upstream["load_spectra"]["data"]
 devices = pd.read_hdf(devices_h5file, "devices")
 devices.head()
 
-def calculate_twinned_score(devices,twinned_condition):
-    for group, group_df in devices.loc[devices["reference"]].groupby(['device', 'instrument', 'probe']):
+def calculate_twinned_score(devices,reference_condition,twinned_condition):
+    for group, group_df in devices.loc[reference_condition].groupby(['device', 'instrument', 'probe']):
         probe = group[2]
         #print("-{}-".format(probe))
         twinned = devices.loc[twinned_condition]
@@ -41,7 +41,8 @@ def calculate_twinned_score(devices,twinned_condition):
 devices.loc[devices["reference"],"score"]  =1.0
 #score for twinned spectra
 twinned_condition = (~devices["reference"]) & (devices["probe"] == probe)
-calculate_twinned_score(devices,twinned_condition)
+reference_condition = (devices["reference"]) & (devices["probe"] == probe)
+calculate_twinned_score(devices,reference_condition,twinned_condition)
 
 print(devices.columns)
 # Assert that the DataFrame contains the expected columns
