@@ -91,12 +91,13 @@ devices.to_hdf(devices_h5file, key='devices', mode='w')
 
 def spe_area(spe):
     try:
-        return np.sum(spe.y * np.diff(spe.x_bin_boundaries))
+        sc = spe.trim_axes(method='x-axis', boundaries=(100, 1750))  
+        return np.sum(sc.y * np.diff(sc.x_bin_boundaries))
     except Exception as err:
         print(err)
         return None
 
-devices.loc[reference_condition,"area"] = devices.loc[reference_condition]["spectrum_baseline"].apply(spe_area)
+devices.loc[reference_condition,"area"] = devices.loc[reference_condition]["spectrum_corrected"].apply(spe_area)
 devices.loc[reference_condition][["reference","device","laser_power","area"]]
 
 devices.loc[twinned_condition,"area"] = devices.loc[twinned_condition]["spectrum_corrected"].apply(spe_area)   
@@ -110,13 +111,13 @@ import matplotlib.pyplot as plt
 def plot_spectra(row):
     try:
         sc =row["spectrum_corrected"]
-        sc = sc.trim_axes(method='x-axis', boundaries=(65, 1750))        
+        sc = sc.trim_axes(method='x-axis', boundaries=(100, 1750))        
         sc.plot(ax=axes[0],label="{}%".format(row["laser_power_percent"]))
     except:
         pass
     try:
         sc =row["spectrum_harmonized"]
-        sc = sc.trim_axes(method='x-axis', boundaries=(65, 1750))
+        sc = sc.trim_axes(method='x-axis', boundaries=(100, 1750))
         sc.plot(ax=axes[1],label="{}%".format(row["laser_power_percent"]))
     except:
         pass    

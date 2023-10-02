@@ -95,7 +95,9 @@ def intensity_normalization(row):
         #print(subset,row["laser_power_percent"],len(spe.x),len(spe_led.x),spe.x==spe_led.x)
         #spe_corrected = Y*spe_y/spe_led.y
         spe_corrected = _Y*spe_y/spe_led_sampled
-
+        # Assuming _Y, spe_y, and spe_led_sampled are NumPy arrays
+        mask = (spe_led_sampled == 0)
+        spe_corrected[mask] = 0
         return rc2.spectrum.Spectrum(spe.x, spe_corrected)
     except Exception as err:
         print(err)

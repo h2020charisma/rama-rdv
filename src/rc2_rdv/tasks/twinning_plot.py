@@ -24,13 +24,13 @@ def plot_spectra(row):
         pass
     try:
         sc=row["spectrum_baseline"]
-        sc = sc.trim_axes(method='x-axis', boundaries=(60, 300))
+        sc = sc.trim_axes(method='x-axis', boundaries=(100, 300))
         sc.plot(ax=axes[2],label="{}%".format(row["laser_power_percent"]))
     except:
         pass    
     try:
         sc =row["spectrum_corrected"]
-        sc = sc.trim_axes(method='x-axis', boundaries=(65, 300))
+        sc = sc.trim_axes(method='x-axis', boundaries=(100, 300))
         sc.plot(ax=axes[3],label="{}%".format(row["laser_power_percent"]))
     except:
         pass    
