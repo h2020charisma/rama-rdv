@@ -1,5 +1,5 @@
 # + tags=["parameters"]
-upstream = ["twinning_normalize","load_spectra"]
+upstream = ["twinning_normalize"]
 product = None
 root_data_folder: None
 files_led_reference: None
@@ -102,8 +102,9 @@ def intensity_normalization(row):
         return None
 
 
-devices_h5file= upstream["load_spectra"]["data"]
+devices_h5file= upstream["twinning_normalize"]["data"]
 devices = pd.read_hdf(devices_h5file, "devices")
+devices_h5file= product["data"]
 devices.head()
 
 twinned_condition = (~devices["reference"]) & (devices["probe"] == probe)

@@ -1,5 +1,5 @@
 # + tags=["parameters"]
-upstream = ["load_spectra","twinning_normalize","twinning_intensity_normalization"]
+upstream = ["twinning_intensity_normalization"]
 product = None
 probe: None
 # -
@@ -8,7 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-devices_h5file= upstream["load_spectra"]["data"]
+devices_h5file= upstream["twinning_intensity_normalization"]["data"]
 devices = pd.read_hdf(devices_h5file, "devices")
 devices.head()
 

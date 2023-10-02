@@ -57,7 +57,7 @@ print(devices.columns)
 # Assert that the DataFrame contains the expected columns
 assert set(["spectrum_baseline","spectrum_normalized"]).issubset(devices.columns), "a processed spectrum column is missing"
 
-devices.to_hdf(devices_h5file, key='devices', mode='w')
+devices.to_hdf(product["data"], key='devices', mode='w')
 
 
 def plot_spectra(row):

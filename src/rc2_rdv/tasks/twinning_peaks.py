@@ -1,5 +1,5 @@
 # + tags=["parameters"]
-upstream = ["twinning_intensity_normalization","load_spectra"]
+upstream = ["twinning_intensity_normalization"]
 product = None
 probe: None
 
@@ -32,8 +32,9 @@ def calc_regression(x,y):
     #print("Slope (Coefficient):", model.coef_[0])    
     return  (model.intercept_,model.coef_[0])
 
-devices_h5file= upstream["load_spectra"]["data"]
+devices_h5file= upstream["twinning_intensity_normalization"]["data"]
 devices = pd.read_hdf(devices_h5file, "devices")
+devices_h5file =product["data"]
 devices.head()
 
 #peaks
@@ -88,18 +89,19 @@ devices.to_hdf(devices_h5file, key='devices', mode='w')
 
 
 
-def spe_area(row):
+def spe_area(spe):
     try:
-        spe = row["spectrum_harmonized"]
         return np.sum(spe.y * np.diff(spe.x_bin_boundaries))
-    except:
+    except Exception as err:
+        print(err)
         return None
 
-devices.loc[reference_condition,"area"] = devices.loc[reference_condition].apply(spe_area,axis=1)
+devices.loc[reference_condition,"area"] = devices.loc[reference_condition]["spectrum_baseline"].apply(spe_area)
 devices.loc[reference_condition][["reference","device","laser_power","area"]]
 
-devices.loc[twinned_condition,"area"] = devices.loc[twinned_condition].apply(spe_area,axis=1)   
-devices.loc[twinned_condition][["reference","device","laser_power","area"]]
+devices.loc[twinned_condition,"area"] = devices.loc[twinned_condition]["spectrum_corrected"].apply(spe_area)   
+devices.loc[twinned_condition,"area_harmonized"] = devices.loc[twinned_condition]["spectrum_harmonized"].apply(spe_area)   
+devices.loc[twinned_condition][["reference","device","laser_power","area","area_harmonized"]]
 
 devices.to_hdf(devices_h5file, key='devices', mode='w')
 
