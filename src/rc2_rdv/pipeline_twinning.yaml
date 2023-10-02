@@ -11,7 +11,7 @@ tasks:
   - source: tasks/twinning_normalize.py
     product: 
       nb: "products/twinning_normalize.ipynb"
-      data: "products/twinning_spectra_table_notmalized.h5"
+      data: "products/twinning_spectra_table_normalized.h5"
     params:
       root_data_folder: "{{root_led}}"
       probe: "Probe"
