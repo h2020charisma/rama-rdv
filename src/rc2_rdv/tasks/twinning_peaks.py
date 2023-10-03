@@ -3,6 +3,7 @@ upstream = ["twinning_intensity_normalization"]
 product = None
 probe: None
 spectrum_corrected_column: None
+baseline_after_ledcorrection: None
 
 # -
 
@@ -12,7 +13,7 @@ import matplotlib.pyplot as plt
 import ramanchada2 as rc2
 import numpy as np
 
-spectra2process= spectrum_corrected_column
+spectra2process = "{}_baseline".format(spectrum_corrected_column)  if baseline_after_ledcorrection else spectrum_corrected_column
 print(spectra2process)
 
 def calc_peak_amplitude(spe,peak=144,prominence=0.01):
@@ -92,7 +93,6 @@ devices.loc[twinned_condition,"spectrum_harmonized"] = devices.loc[twinned_condi
 devices.to_hdf(devices_h5file, key='devices', mode='w')
 
 
-
 def spe_area(spe):
     try:
         sc = spe.trim_axes(method='x-axis', boundaries=(100, 1750))  
@@ -110,6 +110,12 @@ devices.loc[twinned_condition][["reference","device","laser_power","area","area_
 
 devices.to_hdf(devices_h5file, key='devices', mode='w')
 
+pd.DataFrame({"twinned" : {"slope"  : slope_B, "intercept" : intercept_B},
+              "reference" : {"slope"  : slope_A, "intercept" : intercept_A}
+              }).to_hdf(devices_h5file, key='regression', mode='a')
+
+pd.DataFrame({"result" : {"factor_correction" :factor_correction}
+              }).to_hdf(devices_h5file, key='factor_correction', mode='a')
 
 import matplotlib.pyplot as plt
 def plot_spectra(row,boundaries=(100, 1750)):
