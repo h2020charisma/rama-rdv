@@ -1,61 +1,35 @@
 # + tags=["parameters"]
-upstream = ["twinning_intensity_normalization"]
+upstream = ["twinning_peaks","load_leds"]
 product = None
 probe: None
 # -
 
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+from tasks.utils import plot_spectra
 
-
-devices_h5file= upstream["twinning_intensity_normalization"]["data"]
+devices_h5file= upstream["twinning_peaks"]["data"]
 devices = pd.read_hdf(devices_h5file, "devices")
 devices.head()
 
-leds = pd.read_hdf(devices_h5file, "led")
+leds_h5file= upstream["load_leds"]["data"]
+leds = pd.read_hdf(leds_h5file, "led")
 leds.head()
 
-def plot_spectra(row):
-    try:
-        sc=row["spectrum"]
-        sc = sc.trim_axes(method='x-axis', boundaries=(100, 300))        
-        sc.plot(ax=axes[0],label="{}%".format(row["laser_power_percent"]))
-    except:
-        pass
-    try:
-        sc=row["spectrum_normalized"]
-        sc = sc.trim_axes(method='x-axis', boundaries=(100, 300))
-        sc.plot(ax=axes[1],label="{}%".format(row["laser_power_percent"]))
-    except:
-        pass
-    try:
-        sc=row["spectrum_baseline"]
-        sc = sc.trim_axes(method='x-axis', boundaries=(100, 300))
-        sc.plot(ax=axes[2],label="{}%".format(row["laser_power_percent"]))
-    except:
-        pass    
-    try:
-        sc =row["spectrum_corrected"]
-        sc = sc.trim_axes(method='x-axis', boundaries=(100, 300))
-        sc.plot(ax=axes[3],label="{}%".format(row["laser_power_percent"]))
-    except:
-        pass    
-    axes[0].set_title("{} {}".format(row["device"],row["probe"]))
+match_led = pd.read_hdf(leds_h5file, "match")
+match_led.head()
+
     
-fig, axes = plt.subplots(1, 4, figsize=(15, 2))      
-axes[1].set_title("normalized")
-axes[2].set_title("normalized + baseline")
-axes[3].set_title("LED corrected")
-twinned_condition = (~devices["reference"]) & (devices["probe"] == probe)
-devices.loc[twinned_condition].apply(plot_spectra, axis=1)
-
-fig, axes = plt.subplots(1, 4, figsize=(15, 2))  
-axes[1].set_title("original=normalized")
-axes[2].set_title("baseline")
-axes[3].set_title("LED corrected")
+fig, axes = plt.subplots(8,2, figsize=(18,16))  
+cmap = plt.get_cmap('plasma')
+norm = mcolors.Normalize(vmin=0, vmax=100)
 reference_condition = (devices["reference"]) & (devices["probe"] == probe)
-devices.loc[reference_condition].apply(plot_spectra, axis=1)
-
+#devices.loc[reference_condition].apply(plot_spectra, axis=1,args=(1))
+devices.loc[reference_condition].sort_values(by='laser_power_percent').apply(lambda row: plot_spectra(row,axes, 0, True,match_led,leds,cmap,norm), axis=1)
+twinned_condition = (~devices["reference"]) & (devices["probe"] == probe)
+devices.loc[twinned_condition].sort_values(by='laser_power_percent').apply(lambda row: plot_spectra(row,axes, 1,False,match_led,leds,cmap,norm), axis=1)
+plt.tight_layout()
 
 for index, led_spectra in leds.iterrows():
     fig, axes = plt.subplots(1, 3, figsize=(15, 2))   

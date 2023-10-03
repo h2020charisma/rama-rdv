@@ -2,6 +2,7 @@
 upstream = ["twinning_intensity_normalization"]
 product = None
 probe: None
+spectrum_corrected_column: None
 
 # -
 
@@ -11,8 +12,8 @@ import matplotlib.pyplot as plt
 import ramanchada2 as rc2
 import numpy as np
 
-spectra2process="spectrum_corrected"
-spectra2process="spectrum_baseline"
+spectra2process= spectrum_corrected_column
+print(spectra2process)
 
 def calc_peak_amplitude(spe,peak=144,prominence=0.01):
     try:

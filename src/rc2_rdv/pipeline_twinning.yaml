@@ -8,6 +8,18 @@ tasks:
       files_spectra_reference: "{{files_spectra_reference}}"
       files_spectra_twinned: "{{files_spectra_twinned}}"
   
+  - source: tasks/load_leds.py
+    product: 
+      nb: "products/load_leds.ipynb"
+      data: "products/twinning_led_table.h5"
+    params:
+      root_data_folder: "{{root_led}}"
+      files_spectra_reference: "{{files_spectra_reference}}"
+      files_spectra_twinned: "{{files_spectra_twinned}}"
+      files_led_reference: "{{files_led_reference}}"      
+      files_led_twinned: "{{files_led_twinned}}"        
+      probe: "Probe"       
+
   - source: tasks/twinning_normalize.py
     product: 
       nb: "products/twinning_normalize.ipynb"
@@ -22,14 +34,15 @@ tasks:
       nb: "products/twinning_intensity_normalization.ipynb"
       data: "products/twinning_spectra_table_corrected.h5"
     params:
-      root_data_folder: "{{root_led}}"
       files_led_reference: "{{files_led_reference}}"      
       files_led_twinned: "{{files_led_twinned}}"   
       files_spectra_reference: "{{files_spectra_reference}}"
       files_spectra_twinned: "{{files_spectra_twinned}}"      
       probe: "Probe"
       wavelength: 785
-      moving_minimum_window: 10      
+      moving_minimum_window: 10    
+      spectrum_to_correct: "spectrum_normalized" 
+      spectrum_corrected_column: "spectrum_corrected" 
 
   - source: tasks/twinning_plot.py
     product: 
@@ -43,4 +56,4 @@ tasks:
       data: "products/twinning_spectra_table_harmonized.h5"
     params:
       probe: "Probe"  
-      
+      spectrum_corrected_column: "spectrum_corrected_baseline"       
