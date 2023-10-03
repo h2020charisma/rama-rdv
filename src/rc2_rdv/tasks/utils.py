@@ -49,7 +49,7 @@ def plot_spectra(row, axes,column=0, reference=True,match_led= None,leds = None,
         led = match_led.loc[device]["led_spectra"]
         sc = leds.loc[led]["spectrum"]
         sc.plot(ax=axes[0][column],label='_nolegend_',c="gray")
-        sc = sc.trim_axes(method='x-axis', boundaries=(_left, 300))        
+        sc = sc.trim_axes(method='x-axis', boundaries=(_left, 250))        
         sc.plot(ax=axes[1][column],label='_nolegend_',c="gray")
         sc.plot(ax=axes[2][column],label='_nolegend_',c="gray")
     except Exception as err:
