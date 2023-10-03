@@ -12,6 +12,8 @@ devices_h5file= upstream["twinning_intensity_normalization"]["data"]
 devices = pd.read_hdf(devices_h5file, "devices")
 devices.head()
 
+leds = pd.read_hdf(devices_h5file, "led")
+leds.head()
 
 def plot_spectra(row):
     try:
@@ -53,3 +55,13 @@ axes[2].set_title("baseline")
 axes[3].set_title("LED corrected")
 reference_condition = (devices["reference"]) & (devices["probe"] == probe)
 devices.loc[reference_condition].apply(plot_spectra, axis=1)
+
+
+for index, led_spectra in leds.iterrows():
+    fig, axes = plt.subplots(1, 3, figsize=(15, 2))   
+    spe_led = led_spectra["spectrum"]   
+    spe_led.plot(label=index,ax=axes[0])
+    area = led_spectra["area"]
+    spe_dist = led_spectra["spe_dist"]
+    axes[1].plot(spe_led.x,spe_dist.pdf(spe_led.x))
+    axes[2].plot(spe_led.x,spe_dist.pdf(spe_led.x)*area)
