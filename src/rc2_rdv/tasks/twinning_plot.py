@@ -10,10 +10,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from tasks.utils import plot_spectra
+import numpy as np
 
 devices_h5file= upstream["twinning_peaks"]["data"]
 devices = pd.read_hdf(devices_h5file, "devices")
 devices.head()
+
+processing = pd.read_hdf(devices_h5file, "processing")
+processing.head()
 
 regression = pd.read_hdf(devices_h5file, "regression")
 factor_correction = pd.read_hdf(devices_h5file, "factor_correction")
@@ -29,6 +33,7 @@ match_led = pd.read_hdf(leds_h5file, "match")
 match_led.head()
 
     
+print(processing.index,processing["field"])
 fig, axes = plt.subplots(8,2, figsize=(14,14))  
 cmap = plt.get_cmap('plasma')
 norm = mcolors.Normalize(vmin=0, vmax=100)
@@ -39,6 +44,20 @@ twinned_condition = (~devices["reference"]) & (devices["probe"] == probe)
 B =devices.loc[twinned_condition].sort_values(by='laser_power_percent')
 B.apply(lambda row: plot_spectra(row,axes, 1,False,match_led,leds,cmap,norm,fc=factor_correction.iloc[0,0]), axis=1)
 plt.tight_layout()
+
+fig, axes = plt.subplots(1,2, figsize=(10,4)) 
+axes[0].plot(A["laser_power"],A["amplitude"],'o',label=A["device"].unique())
+axes[0].plot(B["laser_power"],B["amplitude"],'+',label=B["device"].unique())
+axes[0].legend()
+bar_width = 0.2  # Adjust this value to control the width of the groups
+bar_positions = np.arange(len(A["laser_power_percent"].values))
+axes[1].bar(bar_positions -bar_width,A["area"], width=bar_width,label=str(A["device"].unique()))
+bar_positions = np.arange(len(B["laser_power_percent"].values))
+axes[1].bar(bar_positions  ,B["area"],width=bar_width,label=str(B["device"].unique()))
+axes[1].bar(bar_positions + bar_width,B["area_harmonized"],width=bar_width,label="{} harmonized".format(B["device"].unique()))
+axes[1].legend()
+plt.tight_layout()
+
 
 A
 

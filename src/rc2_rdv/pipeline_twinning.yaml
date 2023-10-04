@@ -44,6 +44,7 @@ tasks:
       spectrum_to_correct: "spectrum_normalized" 
       spectrum_corrected_column: "spectrum_corrected" 
       baseline_after_ledcorrection: "{{baseline_after_ledcorrection}}"
+      baseline_algorithm: "{{baseline_algorithm}}"
 
   - source: tasks/twinning_plot.py
     product: 

@@ -11,6 +11,7 @@ moving_minimum_window: 10
 spectrum_to_correct: None
 spectrum_corrected_column: None 
 baseline_after_ledcorrection: False
+baseline_algorithm: None
 
 # -
 import os
@@ -19,6 +20,7 @@ import re
 import ramanchada2 as rc2
 import numpy as np
 import pandas as pd
+from tasks.utils import baseline_spectra
 
 def Y_532(x):
     A = 8.30752731e-01
@@ -73,11 +75,15 @@ def intensity_normalization(row,spectrum_to_correct):
         print(err)
         return None
 
-def baseline_spectra(spe,window=moving_minimum_window):
-    return spe - spe.moving_minimum(window)
 
 devices_h5file= upstream["twinning_normalize"]["data"]
+print(devices_h5file)
 devices = pd.read_hdf(devices_h5file, "devices")
+devices.head()
+
+processing = pd.read_hdf(devices_h5file, "processing")
+processing.head()
+
 devices_h5file= product["data"]
 devices.head()
 
@@ -87,24 +93,33 @@ baseline_column = "{}_baseline".format(spectrum_corrected_column)  if baseline_a
 twinned_condition = (~devices["reference"]) & (devices["probe"] == probe)
 reference_condition = (devices["reference"]) & (devices["probe"] == probe)
 
+kwargs= {"window" : moving_minimum_window}
 if baseline_after_ledcorrection:
     devices.loc[twinned_condition, spectrum_corrected_column] = devices.loc[twinned_condition].apply(lambda row: intensity_normalization(row,spectrum_to_correct),axis=1)
     devices.loc[reference_condition, spectrum_corrected_column] = devices.loc[reference_condition].apply(lambda row: intensity_normalization(row,spectrum_to_correct),axis=1)
-    devices.loc[twinned_condition, baseline_column] = devices.loc[twinned_condition][spectrum_corrected_column].apply(baseline_spectra) 
-    devices.loc[reference_condition, baseline_column] = devices.loc[reference_condition][spectrum_corrected_column].apply(baseline_spectra)   
+    devices.loc[twinned_condition, baseline_column] = devices.loc[twinned_condition][spectrum_corrected_column].apply(lambda spe : baseline_spectra(spe,baseline_algorithm,**kwargs)) 
+    devices.loc[reference_condition, baseline_column] = devices.loc[reference_condition][spectrum_corrected_column].apply(lambda spe : baseline_spectra(spe,baseline_algorithm,**kwargs)) 
     devices.loc[reference_condition, "baseline_removed"] = "after LED correction"    
     devices.loc[twinned_condition, "baseline_removed"] = "after LED correction"    
+    processing.loc["led_corrected"] = {"field" : spectrum_corrected_column}
+    processing.loc["baseline"] = {"field" : baseline_column}    
 else:
-    devices.loc[twinned_condition, baseline_column] = devices.loc[twinned_condition][spectrum_to_correct].apply(baseline_spectra) 
-    devices.loc[reference_condition, baseline_column] = devices.loc[reference_condition][spectrum_to_correct].apply(baseline_spectra)     
+    devices.loc[twinned_condition, baseline_column] = devices.loc[twinned_condition][spectrum_to_correct].apply(lambda spe : baseline_spectra(spe,baseline_algorithm,**kwargs)) 
+    devices.loc[reference_condition, baseline_column] = devices.loc[reference_condition][spectrum_to_correct].apply(lambda spe : baseline_spectra(spe,baseline_algorithm,**kwargs))     
     devices.loc[twinned_condition, spectrum_corrected_column] = devices.loc[twinned_condition].apply(lambda row: intensity_normalization(row,baseline_column),axis=1)
     devices.loc[reference_condition, spectrum_corrected_column] = devices.loc[reference_condition].apply(lambda row: intensity_normalization(row,baseline_column),axis=1)
     devices.loc[reference_condition, "baseline_removed"] = "before LED correction"    
     devices.loc[twinned_condition, "baseline_removed"] = "before LED correction" 
+    processing.loc["led_corrected"] = {"field" : spectrum_corrected_column}
+    processing.loc["baseline"] = {"field" : baseline_column}    
         
 devices.columns
 
 devices.to_hdf(devices_h5file, key='devices', mode='w')
+
+processing.to_hdf(devices_h5file, key='processing', mode='a')
+
+
 led_frame.to_hdf(devices_h5file, key='led', mode='a')
 
 print(devices.columns)

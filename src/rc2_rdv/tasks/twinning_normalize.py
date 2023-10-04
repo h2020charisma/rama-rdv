@@ -51,10 +51,8 @@ assert set(["score"]).issubset(devices.columns), "score column is missing"
 #normalisation
 twinned_condition = (~devices["reference"]) & pd.notna(devices["score"])
 devices.loc[twinned_condition, result_spectrum] = devices.loc[twinned_condition].apply(normalize_spectra, axis=1)
-#devices.loc[twinned_condition, "spectrum_baseline"] = devices.loc[twinned_condition]["spectrum_normalized"].apply(baseline_spectra)
 
 devices.loc[reference_condition, result_spectrum] = devices.loc[reference_condition].apply(normalize_spectra, axis=1)
-#devices.loc[reference_condition, "spectrum_baseline"] = devices.loc[reference_condition]["spectrum_normalized"].apply(baseline_spectra)
 
 devices.loc[twinned_condition | reference_condition][["device","score","laser_power","laser_power_percent"]]
 
@@ -62,5 +60,7 @@ print(devices.columns)
 # Assert that the DataFrame contains the expected columns
 assert set([result_spectrum]).issubset(devices.columns), "a processed spectrum column is missing"
 
+
 devices.to_hdf(product["data"], key='devices', mode='w')
 
+pd.DataFrame({"original" : {"field" : "spectrum"}, "normalized" : {"field"  : result_spectrum}}).T.to_hdf(product["data"], key='processing', mode='a')

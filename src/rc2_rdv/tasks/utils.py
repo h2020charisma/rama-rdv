@@ -1,7 +1,13 @@
 import matplotlib.pyplot as plt
 
-def baseline_spectra(spe,window=10):
-    return spe - spe.moving_minimum(window)
+def baseline_spectra(spe, algo="als", **kwargs):
+    if algo == "snip":
+        return spe - spe.baseline_snip(**kwargs)
+    elif algo == "als":
+        return spe - spe.baseline_als(**kwargs)
+    else:  # movingmin
+        window = kwargs.get("window", 10)
+        return spe - spe.moving_minimum(window)
 
 def plot_spectra(row, axes,column=0, reference=True,match_led= None,leds = None, cmap=None, norm = None, fc= None):
     _left = 100
@@ -10,7 +16,7 @@ def plot_spectra(row, axes,column=0, reference=True,match_led= None,leds = None,
     try:
         sc=row["spectrum"]
         sc.plot(ax=axes[0][column],label="{}%".format(row["laser_power_percent"]),c=_color)
-        sc = sc.trim_axes(method='x-axis', boundaries=(_left, 300))        
+        sc = sc.trim_axes(method='x-axis', boundaries=(_left, 250))        
         sc.plot(ax=axes[1][column],label="{}%".format(row["laser_power_percent"]),c=_color)
     except:
         pass

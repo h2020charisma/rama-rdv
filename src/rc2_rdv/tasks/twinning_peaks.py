@@ -39,8 +39,12 @@ def calc_regression(x,y):
 
 devices_h5file= upstream["twinning_intensity_normalization"]["data"]
 devices = pd.read_hdf(devices_h5file, "devices")
-devices_h5file =product["data"]
 devices.head()
+
+processing = pd.read_hdf(devices_h5file, "processing")
+processing.head()
+
+devices_h5file =product["data"]
 
 #peaks
 reference_condition = (devices["reference"]) & (devices["probe"] == probe)
@@ -90,6 +94,7 @@ def harmonization(row):
         return None
 #only twinned is multiplied
 devices.loc[twinned_condition,"spectrum_harmonized"] = devices.loc[twinned_condition].apply(harmonization,axis=1)
+processing.loc["harmonized"] = {"field" : "spectrum_harmonized"}    
 devices.to_hdf(devices_h5file, key='devices', mode='w')
 
 
@@ -109,6 +114,9 @@ devices.loc[twinned_condition,"area_harmonized"] = devices.loc[twinned_condition
 devices.loc[twinned_condition][["reference","device","laser_power","area","area_harmonized"]]
 
 devices.to_hdf(devices_h5file, key='devices', mode='w')
+
+processing.to_hdf(devices_h5file, key='processing', mode='a')
+
 
 pd.DataFrame({"twinned" : {"slope"  : slope_B, "intercept" : intercept_B},
               "reference" : {"slope"  : slope_A, "intercept" : intercept_A}
