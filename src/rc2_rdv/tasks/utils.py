@@ -2,9 +2,13 @@ import matplotlib.pyplot as plt
 
 def baseline_spectra(spe, algo="als", **kwargs):
     if algo == "snip":
-        return spe - spe.baseline_snip(**kwargs)
+        del kwargs["window"]
+        kwargs["niter"]  = 1000
+        return spe.subtract_baseline_rc1_snip(**kwargs)
     elif algo == "als":
-        return spe - spe.baseline_als(**kwargs)
+        del kwargs["window"]
+        kwargs["niter"]  = 1000
+        return spe.subtract_baseline_rc1_als(**kwargs)
     else:  # movingmin
         window = kwargs.get("window", 10)
         return spe - spe.moving_minimum(window)
