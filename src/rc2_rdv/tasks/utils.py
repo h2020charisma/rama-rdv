@@ -8,6 +8,9 @@ def baseline_spectra(spe, algo="als", **kwargs):
     elif algo == "als":
         del kwargs["window"]
         kwargs["niter"]  = 1000
+        kwargs["p"]  = 0.1
+        kwargs["lam"]  = 1e3
+        #lam: float = 1e5, p: float = 0.001, niter: PositiveInt = 100,#
         return spe.subtract_baseline_rc1_als(**kwargs)
     else:  # movingmin
         window = kwargs.get("window", 10)

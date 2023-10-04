@@ -120,7 +120,7 @@ processing.to_hdf(devices_h5file, key='processing', mode='a')
 
 pd.DataFrame({"twinned" : {"slope"  : slope_B, "intercept" : intercept_B},
               "reference" : {"slope"  : slope_A, "intercept" : intercept_A}
-              }).to_hdf(devices_h5file, key='regression', mode='a')
+              }).T.to_hdf(devices_h5file, key='regression', mode='a')
 
 pd.DataFrame({"result" : {"factor_correction" :factor_correction}
               }).to_hdf(devices_h5file, key='factor_correction', mode='a')
