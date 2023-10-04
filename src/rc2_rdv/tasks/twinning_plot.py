@@ -55,6 +55,8 @@ axes[1].bar(bar_positions -bar_width,A["area"], width=bar_width,label=str(A["dev
 bar_positions = np.arange(len(B["laser_power_percent"].values))
 axes[1].bar(bar_positions  ,B["area"],width=bar_width,label=str(B["device"].unique()))
 axes[1].bar(bar_positions + bar_width,B["area_harmonized"],width=bar_width,label="{} harmonized".format(B["device"].unique()))
+# Set the x-axis positions and labels
+plt.xticks(bar_positions, bar_positions)
 axes[1].legend()
 plt.tight_layout()
 
