@@ -20,8 +20,24 @@ import re
 import ramanchada2 as rc2
 import numpy as np
 import pandas as pd
-from tasks.utils import baseline_spectra
 
+
+def baseline_spectra(spe, algo="als", **kwargs):
+    if algo == "snip":
+        del kwargs["window"]
+        kwargs["niter"]  = 1000
+        return spe.subtract_baseline_rc1_snip(**kwargs)
+    elif algo == "als":
+        del kwargs["window"]
+        kwargs["niter"]  = 1000
+        kwargs["p"]  = 0.1
+        kwargs["lam"]  = 1e3
+        #lam: float = 1e5, p: float = 0.001, niter: PositiveInt = 100,#
+        return spe.subtract_baseline_rc1_als(**kwargs)
+    else:  # movingmin
+        window = kwargs.get("window", 10)
+        return spe - spe.moving_minimum(window)
+    
 def Y_532(x):
     A = 8.30752731e-01
     B = 2.54881472e-07

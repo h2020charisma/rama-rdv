@@ -24,7 +24,7 @@ def normalize_spectra(row):
     return row["spectrum"] * row["score"]
 
 devices_h5file= upstream["load_spectra"]["data"]
-devices = pd.read_hdf(devices_h5file, "devices")
+devices = pd.read_hdf(devices_h5file, key="devices")
 devices.head()
 
 def calculate_twinned_score(devices,reference_condition,twinned_condition):
