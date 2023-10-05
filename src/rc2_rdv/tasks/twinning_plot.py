@@ -111,16 +111,16 @@ plt.tight_layout()
 
 
 fig, axes = plt.subplots(1,2, figsize=(10,4)) 
-axes[0].plot(A["laser_power"],A["amplitude"],'o',label=A["device"].unique())
+axes[0].plot(A["laser_power"],A["height"],'o',label=A["device"].unique())
 A_regr=regression.loc["reference"]
 A_pred = A["laser_power"]*A_regr["slope"] + A_regr["intercept"]
 axes[0].plot(A["laser_power"],A_pred,'-',label="{:.2e} * LP + {:.2e}".format(A_regr["slope"],A_regr["intercept"]))
 B_regr=regression.loc["twinned"]
-axes[0].plot(B["laser_power"],B["amplitude"],'+',label=B["device"].unique())
+axes[0].plot(B["laser_power"],B["height"],'+',label=B["device"].unique())
 B_pred =B["laser_power"]*B_regr["slope"] + B_regr["intercept"]
 axes[0].plot(B["laser_power"],B_pred,'-',label="{:.2e} * LP + {:.2e}".format(B_regr["slope"],B_regr["intercept"]))
 #plt.plot(x_values, y_values, color='red', label="Linear Regression Line")
-axes[0].set_ylabel("amplitude of the (fitted) peak @ 144cm-1")
+axes[0].set_ylabel("height of the (fitted) peak @ 144cm-1")
 axes[0].set_xlabel("laser power, %")
 axes[0].legend()
 bar_width = 0.2  # Adjust this value to control the width of the groups

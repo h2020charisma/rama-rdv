@@ -13,21 +13,26 @@ import matplotlib.pyplot as plt
 import ramanchada2 as rc2
 import numpy as np
 
+peak_intensity="height"
 spectra2process = "{}_baseline".format(spectrum_corrected_column)  if baseline_after_ledcorrection else spectrum_corrected_column
 print(spectra2process)
 
-def calc_peak_amplitude(spe,peak=144,prominence=0.01):
+def calc_peak_intensity(spe,peak=144,prominence=0.01):
     try:
-        spe = spe.trim_axes(method='x-axis', boundaries=(65, 300))
+        boundaries=(80, 300)
+        spe = spe.trim_axes(method='x-axis', boundaries=boundaries)
         candidates = spe.find_peak_multipeak(prominence=prominence)
-        print(candidates)
         fit_res = spe.fit_peak_multimodel(profile='Voigt', candidates=candidates)
         df = fit_res.to_dataframe_peaks()
         df["sorted"] = abs(df["center"] - peak) #closest peak to 144
         df_sorted = df.sort_values(by='sorted')
-        print(df_sorted["amplitude"][0],df_sorted["center"][0])
-        return df_sorted["amplitude"][0]
-    except:
+        fig, ax = plt.subplots(figsize=(6,2))
+        spe.plot(ax=ax, fmt=':',label="{} ={:.3f} amplitude={:.3f} center={:.1f}".format(peak_intensity,
+                df_sorted.iloc[0][peak_intensity],df_sorted.iloc[0]["amplitude"],df_sorted.iloc[0]["center"]))
+        fit_res.plot(ax=ax)        
+        return df_sorted[peak_intensity][0]
+    except Exception as err:
+        print(err)
         return None
 
 #slope
@@ -48,33 +53,39 @@ devices_h5file =product["data"]
 
 #peaks
 reference_condition = (devices["reference"]) & (devices["probe"] == probe)
-devices.loc[reference_condition ,"amplitude"] = devices.loc[(devices["reference"]) ][spectra2process].apply(calc_peak_amplitude)
-devices.to_hdf(devices_h5file, key='devices', mode='w')
-
-#regression
-A= devices.loc[reference_condition,["reference","laser_power","amplitude"]].dropna()
-(intercept_A,slope_A) = calc_regression(A[["laser_power"]],A["amplitude"])
-#devices.loc[reference_condition,"slope"]
-#devices.to_hdf(devices_h5file, key='devices', mode='w')
-devices.loc[reference_condition][["reference","device","laser_power","amplitude"]]
-
-#peaks
-twinned_condition = (~devices["reference"]) & (devices["probe"] == probe)
-devices.loc[twinned_condition,"amplitude"] = devices.loc[twinned_condition][spectra2process].apply(calc_peak_amplitude)
-devices.to_hdf(devices_h5file, key='devices', mode='w')
-
-#regression
-B= devices.loc[twinned_condition,["reference","laser_power","amplitude"]].dropna()
-#devices.loc[twinned_condition,"slope"] = 
-(intercept_B,slope_B) = calc_regression(B[["laser_power"]],B["amplitude"])
-#devices.to_hdf(devices_h5file, key='devices', mode='w')
-devices.loc[twinned_condition][["reference","device","laser_power","amplitude"]]
-
-
 A = devices.loc[reference_condition]
+A.head()
+
+devices.loc[reference_condition,peak_intensity] = A[spectra2process].apply(calc_peak_intensity)
+
+twinned_condition = (~devices["reference"]) & (devices["probe"] == probe)
 B = devices.loc[twinned_condition]
-plt.plot(A["laser_power"],A["amplitude"],'o',label=A["device"].unique())
-plt.plot(B["laser_power"],B["amplitude"],'+',label=B["device"].unique())
+B.head()
+
+devices.loc[twinned_condition,peak_intensity] = B[spectra2process].apply(calc_peak_intensity)
+
+devices.to_hdf(devices_h5file, key='devices', mode='w')
+
+#regression
+A= devices.loc[reference_condition,["device","reference","laser_power",peak_intensity]]
+#.dropna()
+A
+
+(intercept_A,slope_A) = calc_regression(A[["laser_power"]],A[peak_intensity])
+
+#regression
+B= devices.loc[twinned_condition,["device","reference","laser_power",peak_intensity]]
+#.dropna()
+B
+
+(intercept_B,slope_B) = calc_regression(B[["laser_power"]],B[peak_intensity])
+
+
+#A = devices.loc[reference_condition]
+#B = devices.loc[twinned_condition]
+
+plt.plot(A["laser_power"],A[peak_intensity],'o',label=A["device"].unique())
+plt.plot(B["laser_power"],B[peak_intensity],'+',label=B["device"].unique())
 plt.legend()
 
 #Factor correction (FC) is obtained by dividing the slope of the reference equipment (spectrometer A) 
