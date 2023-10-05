@@ -87,7 +87,7 @@ def load_led(root_led=root_data_folder,folder_path_led=[files_led_reference,file
                 led_spectra[subset]["area"] =   spe_area(spe_led)
     return led_spectra
 
-led_spectra = load_led(root_led=root_data_folder,folder_path_led=[files_led_reference,files_led_twinned],filter_filename=r'^(LED|NIR)',filter_probe="Probe")
+led_spectra = load_led(root_led=root_data_folder,folder_path_led=[files_led_reference,files_led_twinned],filter_filename=r'^(LED|NIR)',filter_probe=probe)
 for key in led_spectra.keys():
     print(led_spectra[key])
 assert bool(led_spectra), "No led spectra!"

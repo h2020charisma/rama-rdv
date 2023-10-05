@@ -1,7 +1,6 @@
 # + tags=["parameters"]
 upstream = ["load_spectra"]
 product = None
-root_data_folder: None
 probe: None
 result_spectrum = "spectrum_normalized"
 

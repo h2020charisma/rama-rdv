@@ -25,7 +25,6 @@ tasks:
       nb: "products/twinning_normalize.ipynb"
       data: "products/twinning_spectra_table_normalized.h5"
     params:
-      root_data_folder: "{{root_led}}"
       probe: "Probe"
       result_spectrum: "spectrum_normalized"
 
@@ -50,8 +49,7 @@ tasks:
     product: 
       nb: "products/twinning_plot.ipynb"
     params:
-      probe: "Probe"      
-      spectrum_corrected_column: "spectrum_corrected"        
+      probe: "Probe"           
 
   - source: tasks/twinning_peaks.py
     product: 
@@ -59,6 +57,5 @@ tasks:
       data: "products/twinning_spectra_table_harmonized.h5"
     params:
       probe: "Probe"  
-      #spectrum_corrected_column: "spectrum_corrected_baseline"       
       spectrum_corrected_column: "spectrum_corrected"   
       baseline_after_ledcorrection: "{{baseline_after_ledcorrection}}"
