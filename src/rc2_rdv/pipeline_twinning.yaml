@@ -49,7 +49,16 @@ tasks:
     product: 
       nb: "{{output_folder}}/twinning_plot.ipynb"
     params:
-      probe: "Probe"           
+      probe: "Probe"         
+
+  - source: tasks/twinning_alt.py
+    product: 
+      nb: "{{output_folder}}/twinning_alt.ipynb"
+    params:
+      probe: "Probe"                   
+      spectrum_to_correct: "spectrum_normalized" 
+      spectrum_corrected_column: "spectrum_corrected"      
+      baseline_after_ledcorrection: "{{baseline_after_ledcorrection}}"      
 
   - source: tasks/twinning_peaks.py
     product: 
