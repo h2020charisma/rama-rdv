@@ -14,7 +14,7 @@ import numpy as np
 def plot_spectra(row, axes,column=0, reference=True,match_led= None,leds = None, cmap=None, norm = None, fc= None):
     _left = 100
     _color = cmap(norm(row["laser_power_percent"]))
-    _baseline_when = row["baseline_removed"]
+    #_baseline_when = row["baseline_removed"]
     try:
         sc=row["spectrum"]
         sc.plot(ax=axes[0][column],label="{}%".format(row["laser_power_percent"]),c=_color)

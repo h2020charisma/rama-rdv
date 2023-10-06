@@ -14,9 +14,7 @@ baseline_after_ledcorrection: False
 baseline_algorithm: None
 
 # -
-import os
 import matplotlib.pyplot as plt
-import re
 import ramanchada2 as rc2
 import numpy as np
 import pandas as pd
@@ -78,7 +76,7 @@ def intensity_normalization(row,spectrum_to_correct):
 
         subset=row["device"]
         led_row = led_frame.loc[match_led[subset]]
-        spe_led = led_row["spectrum"]
+        #spe_led = led_row["spectrum"]
         spe_dist = led_row["spe_dist"]
         area = led_row["area"]
 
