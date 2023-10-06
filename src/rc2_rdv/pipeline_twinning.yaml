@@ -59,3 +59,4 @@ tasks:
       probe: "Probe"  
       spectrum_corrected_column: "spectrum_corrected"   
       baseline_after_ledcorrection: "{{baseline_after_ledcorrection}}"
+      fit_peak:  "{{fit_peak}}"

@@ -107,7 +107,8 @@ A
 
 B
 
-_figlen = 7 + (processing.shape[0]-4)
+_figlen = 7 
+print(processing.shape[0])
 fig, axes = plt.subplots(_figlen,2 , figsize=(14,14)) 
 A.apply(lambda row: plot_spectra(row,axes, 0, True,match_led,leds,cmap,norm), axis=1)
 B.apply(lambda row: plot_spectra(row,axes, 1,False,match_led,leds,cmap,norm,fc=factor_correction.iloc[0,0]), axis=1)

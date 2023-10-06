@@ -4,6 +4,7 @@ product = None
 probe: None
 spectrum_corrected_column: None
 baseline_after_ledcorrection: None
+fit_peak: None
 
 # -
 
@@ -22,23 +23,33 @@ def calc_peak_intensity(spe,peak=144,prominence=0.01):
         boundaries=(peak-50, peak+50)
         spe = spe.trim_axes(method='x-axis', boundaries=boundaries)
         candidates = spe.find_peak_multipeak(prominence=prominence)
-        fit_res = spe.fit_peak_multimodel(profile='Voigt', candidates=candidates)
-        df = fit_res.to_dataframe_peaks()
-        df["sorted"] = abs(df["center"] - peak) #closest peak to 144
-        df_sorted = df.sort_values(by='sorted')
-
-        index_left = np.searchsorted(spe.x, df_sorted["center"][0] , side='left', sorter=None)
-        index_right = np.searchsorted(spe.x, df_sorted["center"][0] , side='right', sorter=None)
-
-        intensity_val = (spe.y[index_right] + spe.y[index_left])/2.0
-        #print(index_right,spe.y[index_right],index_left,spe.y[index_left],intensity_val)
         fig, ax = plt.subplots(figsize=(6,2))
 
-        spe.plot(ax=ax, fmt=':',label="intensity = {:.3f} {} ={:.3f} amplitude={:.3f} center={:.1f}".format(
+        if fit_peak:
+            fit_res = spe.fit_peak_multimodel(profile='Voigt', candidates=candidates)
+            df = fit_res.to_dataframe_peaks()
+            df["sorted"] = abs(df["center"] - peak) #closest peak to 144
+            df_sorted = df.sort_values(by='sorted')
+            index_left = np.searchsorted(spe.x, df_sorted["center"][0] , side='left', sorter=None)
+            index_right = np.searchsorted(spe.x, df_sorted["center"][0] , side='right', sorter=None)
+            intensity_val = (spe.y[index_right] + spe.y[index_left])/2.0
+            _label = "intensity = {:.3f} {} ={:.3f} amplitude={:.3f} center={:.1f}".format(
                 intensity_val,peak_intensity,df_sorted.iloc[0][peak_intensity],
-                df_sorted.iloc[0]["amplitude"],df_sorted.iloc[0]["center"]))
-        fit_res.plot(ax=ax)       
-
+                df_sorted.iloc[0]["amplitude"],df_sorted.iloc[0]["center"])
+            spe.plot(ax=ax, fmt=':',label=_label)
+            fit_res.plot(ax=ax)            
+        else:
+            _col = "amplitude"
+            peak_list = []
+            for c in candidates:
+                for p in c.peaks:
+                    peak_list.append({_col: p.amplitude, 'position': p.position})
+            df_sorted = pd.DataFrame(peak_list)
+            df_sorted["sorted"] = abs(df_sorted["position"] - peak) #closest peak to 144
+            df_sorted = df_sorted.sort_values(by='sorted')
+            intensity_val = df_sorted.iloc[0][_col]
+            _label = "{}={:.3f} position={:.1f}".format(_col,intensity_val,df_sorted.iloc[0]["position"])            
+            spe.plot(ax=ax, fmt=':',label=_label)
         #return df_sorted[peak_intensity][0]
         return intensity_val
     except Exception as err:

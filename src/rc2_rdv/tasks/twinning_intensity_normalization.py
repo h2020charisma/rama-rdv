@@ -32,6 +32,8 @@ def baseline_spectra(spe, algo="als", **kwargs):
         kwargs["lam"]  = 1e3
         #lam: float = 1e5, p: float = 0.001, niter: PositiveInt = 100,#
         return spe.subtract_baseline_rc1_als(**kwargs)
+    elif (algo == "none") or (algo is None):  # movingmin
+        return spe     
     else:  # movingmin
         window = kwargs.get("window", 10)
         return spe - spe.moving_minimum(window)
@@ -124,8 +126,8 @@ else:
     devices.loc[reference_condition, spectrum_corrected_column] = devices.loc[reference_condition].apply(lambda row: intensity_normalization(row,baseline_column),axis=1)
     devices.loc[reference_condition, "baseline_removed"] = "before LED correction"    
     devices.loc[twinned_condition, "baseline_removed"] = "before LED correction" 
+    processing.loc["baseline"] = {"field" : baseline_column}        
     processing.loc["led_corrected"] = {"field" : spectrum_corrected_column}
-    processing.loc["baseline"] = {"field" : baseline_column}    
         
 devices.columns
 
