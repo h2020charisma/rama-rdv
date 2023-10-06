@@ -12,13 +12,16 @@ import numpy as np
 
 
 def plot_spectra(row, axes,column=0, reference=True,match_led= None,leds = None, cmap=None, norm = None, fc= None):
-    _left = 100
+    peak= 144
+    _left = peak - 50
+    _right = peak + 50
+    _right_long = 1750
     _color = cmap(norm(row["laser_power_percent"]))
     #_baseline_when = row["baseline_removed"]
     try:
         sc=row["spectrum"]
         sc.plot(ax=axes[0][column],label="{}%".format(row["laser_power_percent"]),c=_color)
-        sc = sc.trim_axes(method='x-axis', boundaries=(_left, 250))        
+        sc = sc.trim_axes(method='x-axis', boundaries=(_left, _right))        
         sc.plot(ax=axes[1][column],label="{}%".format(row["laser_power_percent"]),c=_color)
     except:
         pass
@@ -32,14 +35,14 @@ def plot_spectra(row, axes,column=0, reference=True,match_led= None,leds = None,
             sc=row[_tag]
 
             _fc = ""
-            boundaries =  [(_left, 250)]
+            boundaries =  [(_left, _right)]
             if (_tag == "spectrum_harmonized") :
                 _fc = "FC {:.3e}".format(fc)
-                boundaries = [(_left, 250),(_left, 1750)]
+                boundaries = [(_left, _right),(_left, _right_long)]
             if (_tag in ["spectrum_corrected_baseline"]) :
-                boundaries = [(_left, 250),(_left, 1750)]      
+                boundaries = [(_left, _right),(_left, _right_long)]      
             if (_tag in ["spectrum_corrected"]) & reference :
-                boundaries = [(_left, 250),(_left, 1750)]                             
+                boundaries = [(_left, _right),(_left, _right_long)]                             
             for b in boundaries:
                 sc1 = sc.trim_axes(method='x-axis', boundaries=b)
                 sc1.plot(ax=axes[index][column],label="{}%".format( row["laser_power_percent"]),c=_color)
@@ -57,7 +60,7 @@ def plot_spectra(row, axes,column=0, reference=True,match_led= None,leds = None,
         led = match_led.loc[device]["led_spectra"]
         sc = leds.loc[led]["spectrum"]
         sc.plot(ax=axes[0][column],label='_nolegend_',c="gray")
-        sc = sc.trim_axes(method='x-axis', boundaries=(_left, 250))        
+        sc = sc.trim_axes(method='x-axis', boundaries=(_left, _right))        
         sc.plot(ax=axes[1][column],label='_nolegend_',c="gray")
         sc.plot(ax=axes[2][column],label='_nolegend_',c="gray")
     except Exception as err:
@@ -104,7 +107,8 @@ A
 
 B
 
-fig, axes = plt.subplots(8,2, figsize=(14,14)) 
+_figlen = 7 + (processing.shape[0]-4)
+fig, axes = plt.subplots(_figlen,2 , figsize=(14,14)) 
 A.apply(lambda row: plot_spectra(row,axes, 0, True,match_led,leds,cmap,norm), axis=1)
 B.apply(lambda row: plot_spectra(row,axes, 1,False,match_led,leds,cmap,norm,fc=factor_correction.iloc[0,0]), axis=1)
 plt.tight_layout()
