@@ -16,7 +16,8 @@ import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 from pandas.plotting import scatter_matrix
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor # not smooth, of course
+from sklearn.ensemble import GradientBoostingRegressor
 
 devices_h5file= upstream["twinning_intensity_normalization"]["data"]
 print(devices_h5file)
@@ -31,11 +32,7 @@ B = devices.loc[twinned_condition]
 spectra2process = "{}_baseline".format(spectrum_corrected_column)  if baseline_after_ledcorrection else spectrum_corrected_column
 
 
-# Create empty lists to store the data
-def train_model(M,plot=True):
-    x_values = []
-    y_values = []
-    laser_power_values = []
+def prep_data(M,x_values = [],y_values = [],laser_power_values = []):
     for index, row in M.iterrows():
         spe = row[spectra2process]
         try:
@@ -45,6 +42,10 @@ def train_model(M,plot=True):
             laser_power_values.extend([row["laser_power"]] * len(spe.x))
         except Exception as err:
             print(err)
+    return (x_values,y_values,laser_power_values)    
+        
+# Create empty lists to store the data
+def train_model(x_values,y_values,laser_power_values,plot=True):
     vars_array = np.array([x_values, laser_power_values]).T 
     target_array = np.array(y_values) 
     model = RandomForestRegressor(n_estimators=100, random_state=42)
@@ -80,30 +81,50 @@ def train_model(M,plot=True):
     r_squared = r2_score(target_array, predicted_target)
     return (model,mse,r_squared)
 
-model_A, mse_A,r_squared_A = train_model(A)
+x_values,y_values,laser_power_values =prep_data(A)
+model_A, mse_A,r_squared_A = train_model(x_values,y_values,laser_power_values)
 #print("Model Coefficients:", coefficients)
 #print("Model Intercept:", intercept)
 print("Mean Squared Error (MSE) (A):", mse_A)
 print("R-squared (A):", r_squared_A)
 
-model_B, mse_B,r_squared_B = train_model(B)
+x_values,y_values,laser_power_values =prep_data(B)
+model_B, mse_B,r_squared_B = train_model(x_values,y_values,laser_power_values)
 #print("Model Coefficients:", coefficients)
 #print("Model Intercept:", intercept)
 print("Mean Squared Error (MSE) (B):", mse_B)
 print("R-squared (B):", r_squared_B)
 
-def correct_by_model(B,model_A,model_B,plot=True):
-    for index, row in B.iterrows():
+def correct_by_model(M,model,plot=True,ax=None):
+    for index, row in M.iterrows():
         spe = row[spectra2process]
         laser_power = row["laser_power"]
-        spe = spe.trim_axes(method='x-axis', boundaries=(144-50, 144+50))
-        ax = spe.plot(label="{}".format(row["laser_power_percent"]))
+        spe = spe.trim_axes(method='x-axis', boundaries=(144-20, 144+20))
+        ax = spe.plot(label="{}".format(row["laser_power_percent"]),ax=ax)
         data_2d = np.column_stack((spe.x, np.full_like(spe.x, laser_power)))
-        predicted_B = model_B.predict(data_2d)
-        predicted_A = model_A.predict(data_2d)
-        ax.plot(spe.x,predicted_B,'.')
-        ax.plot(spe.x,predicted_A,'+')
+        #predicted_B = model_B.predict(data_2d)
+        predicted = model.predict(data_2d)
+        #ax.plot(spe.x,predicted_B,'.')
+        ax.plot(spe.x,predicted,'+')
         #ax.plot(spe.x,spe.y+(predicted_A-predicted_B))
-        ax.twinx().plot(spe.x,np.divide(predicted_A,predicted_B,out=np.zeros_like(predicted_A), where=predicted_B != 0),c='r')
+        #ax.twinx().plot(spe.x,np.divide(predicted_A,predicted_B,out=np.zeros_like(predicted_A), where=predicted_B != 0),c='r')
 plt.legend()
-correct_by_model(B,model_A,model_B)        
+correct_by_model(B,model_A)        
+
+
+x_values,y_values,laser_power_values =prep_data(A)
+x_values,y_values,laser_power_values =prep_data(B,x_values,y_values,laser_power_values)
+model_AB, mse_AB,r_squared_AB = train_model(x_values,y_values,laser_power_values)
+#print("Model Coefficients:", coefficients)
+#print("Model Intercept:", intercept)
+print("Mean Squared Error (MSE) (AB):", mse_AB)
+print("R-squared (AB):", r_squared_AB)
+
+fig, axes = plt.subplots(1,2 , figsize=(12,3)) 
+correct_by_model(A,model_AB,plot=True,ax=axes[0])
+correct_by_model(B,model_AB,plot=True,ax=axes[1])
+x = np.arange(125,170,step=0.001)
+print(x)
+data_2d = np.column_stack((x, np.full_like(x, 227)))
+axes[0].plot(x,model_AB.predict(data_2d))
+axes[1].plot(x,model_AB.predict(data_2d))
