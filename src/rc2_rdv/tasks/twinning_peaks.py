@@ -19,18 +19,28 @@ print(spectra2process)
 
 def calc_peak_intensity(spe,peak=144,prominence=0.01):
     try:
-        boundaries=(80, 300)
+        boundaries=(peak-50, peak+50)
         spe = spe.trim_axes(method='x-axis', boundaries=boundaries)
         candidates = spe.find_peak_multipeak(prominence=prominence)
         fit_res = spe.fit_peak_multimodel(profile='Voigt', candidates=candidates)
         df = fit_res.to_dataframe_peaks()
         df["sorted"] = abs(df["center"] - peak) #closest peak to 144
         df_sorted = df.sort_values(by='sorted')
+
+        index_left = np.searchsorted(spe.x, df_sorted["center"][0] , side='left', sorter=None)
+        index_right = np.searchsorted(spe.x, df_sorted["center"][0] , side='right', sorter=None)
+
+        intensity_val = (spe.y[index_right] + spe.y[index_left])/2.0
+        #print(index_right,spe.y[index_right],index_left,spe.y[index_left],intensity_val)
         fig, ax = plt.subplots(figsize=(6,2))
-        spe.plot(ax=ax, fmt=':',label="{} ={:.3f} amplitude={:.3f} center={:.1f}".format(peak_intensity,
-                df_sorted.iloc[0][peak_intensity],df_sorted.iloc[0]["amplitude"],df_sorted.iloc[0]["center"]))
-        fit_res.plot(ax=ax)        
-        return df_sorted[peak_intensity][0]
+
+        spe.plot(ax=ax, fmt=':',label="intensity = {:.3f} {} ={:.3f} amplitude={:.3f} center={:.1f}".format(
+                intensity_val,peak_intensity,df_sorted.iloc[0][peak_intensity],
+                df_sorted.iloc[0]["amplitude"],df_sorted.iloc[0]["center"]))
+        fit_res.plot(ax=ax)       
+
+        #return df_sorted[peak_intensity][0]
+        return intensity_val
     except Exception as err:
         print(err)
         return None
