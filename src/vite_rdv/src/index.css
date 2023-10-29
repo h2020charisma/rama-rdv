@@ -1,7 +1,11 @@
-import ReactDOM from 'react-dom';
+@import 'normalize.css';
+@import '@h5web/app/styles.css';
 
-import './index.css';
+#root {
+  height: 100vh;
+}
 
-import MyApp from './MyApp';
-
-ReactDOM.render(<MyApp />, document.getElementById('root'));
+input[type='file'] {
+  margin: 2rem;
+  font-family: sans-serif;
+}
