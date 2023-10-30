@@ -14,6 +14,7 @@ import os.path
 from ramanchada2.spectrum import from_chada
 
 
+
 def iter_calib(in_spe, ref, prominence, wlen, n_iters, poly_order=3):
     tmp = in_spe
     for iter in range(n_iters):
@@ -49,6 +50,11 @@ def calibrate(spe_neon,spe_sil,laser_wl=785,neon_wl=rc2const.neon_wl_785_nist_di
         spe_sil_calib.plot(ax=ax[2], label='Sil calibrated',fmt=':',c='r')
         for i in [0,1,2]:
             ax[i].set_xlim(peak_silica-100, peak_silica+100)
+
+    spe_sil.write_cha(product["data"],"/raw")
+    spe_sil_necal.write_cha(product["data"],"/calibrated_neon")    
+    spe_sil_calib.write_cha(product["data"],"/calibrated_neon_sil")   
+    spe_sil_calib.write_cache()         
     return spe_sil_calib
 
 def plot_calibration():
@@ -69,7 +75,7 @@ def peaks(spe_nCal_calib, prominence):
     return cand, init_guess, fit_res
 
 
-Path(product["data"]).mkdir(parents=True, exist_ok=True)
+#Path(product["data"]).mkdir(parents=True, exist_ok=True)
 path_source = upstream["calibration_load"]["data"]
 spe_neon = from_chada(os.path.join(path_source,"neon_{}.cha".format(laser_wl)))
 spe_sil  = from_chada(os.path.join(path_source,"sil_{}.cha".format(laser_wl)))
@@ -91,11 +97,16 @@ if laser_wl in neon_wl:
     fig, ax = plt.subplots()
     spe_pst_silcal.plot(ax=ax, label='ne+sil calibrated')
     spe_pst_calib.plot(ax=ax, label='self calibrated')
+
+    calibrated = spe_pst_calib
+    #calibrated = spe_sil_calib
+    calibrated.write_cha(product["data"],"/calibrated")
+
     #ncal
     spe_nCal = from_chada(os.path.join(path_source,"ncal{}.cha".format(laser_wl)))
     spe_nCal_movmin = spe_nCal - spe_nCal.moving_minimum(120)
-    spe_nCal_calib = apply_calibration(spe_nCal_movmin,spe_pst_calib) 
-    cand, init_guess, fit_res = peaks(spe_nCal_calib,prominence = spe_pst_calib.y_noise*10)
+    spe_nCal_calib = apply_calibration(spe_nCal_movmin,calibrated) 
+    cand, init_guess, fit_res = peaks(spe_nCal_calib,prominence = calibrated.y_noise*10)
     for _ in [cand, init_guess,fit_res]:
         fig, ax = plt.subplots()
         spe_nCal_calib.plot(ax=ax, fmt=':')
