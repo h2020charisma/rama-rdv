@@ -19,3 +19,8 @@ baseline_algorithm: "als"
 #baseline_algorithm: "snip"
 baseline_after_ledcorrection: False
 fit_peak: True
+
+laser_wl4calibration: 532
+neon_file_532_50: "\\532\\Neon\\Ne_532_x50.txt"
+silicon_file_532_50: "\\532\\S1N\\S1N_Reflex532_Z050_005_10000msx2.txt"
+input_file_532_50: "\\532\\NMIJ RM8158a_x50_5%_02.txt"
