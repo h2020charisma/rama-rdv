@@ -19,6 +19,7 @@ from ramanchada2.io.HSDS import read_cha
 def iter_calib(in_spe, ref, prominence, wlen, n_iters, poly_order=3):
     tmp = in_spe
     for iter in range(n_iters):
+        print("iter_calib",iter,len(tmp.x),min(x),max(x))
         tmp = tmp.xcal_fine(ref=ref,
                             poly_order=poly_order,
                             should_fit=False,
@@ -27,8 +28,25 @@ def iter_calib(in_spe, ref, prominence, wlen, n_iters, poly_order=3):
                                                width=1,
                                               )
                            )
+        
     return tmp
 
+def apply_calibration(spe,spe_calib ):
+    try:
+        assert len(spe.x) == len(spe_calib.x), ("x should have same resolution {} vs {}".format(len(spe.x),len(spe_calib.x)))
+        assert min(spe.x) == min(spe_calib.x), ("x should have same start value {} vs {}".format(min(spe.x),min(spe_calib.x)))
+        assert max(spe.x) == max(spe_calib.x), ("x should have same end value {} vs {}".format(max(spe.x),max(spe_calib.x)))
+        spe = spe.__copy__()
+    except Exception as err:
+        spe =  spe.resample_NUDFT_filter(x_range=(min(spe_calib.x),max(spe_calib.x)), xnew_bins=len(spe_calib.x))
+    spe.x = spe_calib.x
+    return spe
+
+def resample(spe_sil,spe_neon):
+    xnew_bins = len(spe_neon.x)
+    xmin = min(spe_neon.x)
+    xmax = max(spe_neon.x)
+    return spe_sil.resample_NUDFT_filter(x_range=(xmin,xmax), xnew_bins=xnew_bins)
 
 def calibrate(spe_neon,spe_sil,laser_wl=785,neon_wl=rc2const.neon_wl_785_nist_dict,plot=True):
     peak_silica = 520.45
@@ -40,9 +58,10 @@ def calibrate(spe_neon,spe_sil,laser_wl=785,neon_wl=rc2const.neon_wl_785_nist_di
     ax.twinx().stem(neon_wl.keys(), neon_wl.values(), label='reference')
 
     spe_neon_calib = spe_neon_wl_calib.abs_nm_to_shift_cm_1_filter(laser_wave_length_nm=laser_wl)
+    print("spe_neon_calib",min(spe_neon_calib.x),max(spe_neon_calib.x))
 
-    spe_sil_necal = spe_sil.__copy__()
-    spe_sil_necal.x = spe_neon_calib.x
+    spe_sil_necal = apply_calibration(spe_sil,spe_neon_calib)
+    
     spe_sil_calib = iter_calib(spe_sil_necal, ref=[peak_silica], wlen=100, prominence=10, n_iters=1, poly_order=0)
     if plot:
         fig, ax = plt.subplots(3,1,figsize=(12,4))
@@ -62,32 +81,24 @@ def calibrate(spe_neon,spe_sil,laser_wl=785,neon_wl=rc2const.neon_wl_785_nist_di
     spe_sil_calib.write_cache()         
     return spe_sil_calib
 
-def plot_calibration():
-    fig, ax = plt.subplots()
-    spe_pst_silcal.plot(ax=ax, label='ne+sil calibrated')
-    spe_pst_calib.plot(ax=ax, label='self calibrated')
+#def plot_calibration():
+#    fig, ax = plt.subplots()
+#    spe_pst_silcal.plot(ax=ax, label='ne+sil calibrated')
+#    spe_pst_calib.plot(ax=ax, label='self calibrated')
 
-def apply_calibration(spe_pst,spe_sil_calib ):
-    spe_pst_silcal = spe_pst.__copy__()
-    spe_pst_silcal.x = spe_sil_calib.x
-    return spe_pst_silcal
-
-
-def peaks(spe_nCal_calib, prominence):
-    cand = spe_nCal_calib.find_peak_multipeak(prominence=prominence, wlen=300, width=1)
-    init_guess = spe_nCal_calib.fit_peak_multimodel(profile='Moffat', candidates=cand, no_fit=True)
-    fit_res = spe_nCal_calib.fit_peak_multimodel(profile='Moffat', candidates=cand)
-    return cand, init_guess, fit_res
 
 
 #Path(product["data"]).mkdir(parents=True, exist_ok=True)
 path_source = upstream["calibration_load"]["data"]
+if os.path.exists(product["data"]):
+    os.remove(product["data"])
 
 spe = {}
 
 for _tag in ["neon","sil"]:
     filename = os.path.join(path_source,"{}_{}.cha".format(_tag,laser_wl))
     x, y, meta = read_cha(filename, dataset="/raw")
+    print(_tag,len(x),min(x),max(x))
     spe[_tag] = Spectrum(x=x, y=y, metadata=meta, cachefile = filename)  # type: ignore
 
 #spe_neon = from_chada(os.path.join(path_source,"neon_{}.cha".format(laser_wl)))
@@ -104,27 +115,19 @@ neon_wl = {
 if laser_wl in neon_wl:
     spe_sil_calib = calibrate(spe_neon,spe_sil,laser_wl,neon_wl[laser_wl])
 
-    spe_pst  = from_chada(os.path.join(path_source,"pst_{}.cha".format(laser_wl)))    
-    spe_pst_silcal = apply_calibration(spe_pst,spe_sil_calib)
-    #self calibration    
-    spe_pst_calib = iter_calib(spe_pst_silcal, ref=rc2const.PST_RS_dict, prominence=1, wlen=100, n_iters=20)
-    fig, ax = plt.subplots()
-    spe_pst_silcal.plot(ax=ax, label='ne+sil calibrated')
-    spe_pst_calib.plot(ax=ax, label='self calibrated')
-
-    calibrated = spe_pst_calib
-    #calibrated = spe_sil_calib
-    calibrated.write_cha(product["data"],"/calibrated")
-
-    #ncal
-    spe_nCal = from_chada(os.path.join(path_source,"ncal{}.cha".format(laser_wl)))
-    spe_nCal_movmin = spe_nCal - spe_nCal.moving_minimum(120)
-    spe_nCal_calib = apply_calibration(spe_nCal_movmin,calibrated) 
-    cand, init_guess, fit_res = peaks(spe_nCal_calib,prominence = calibrated.y_noise*10)
-    for _ in [cand, init_guess,fit_res]:
-        fig, ax = plt.subplots()
-        spe_nCal_calib.plot(ax=ax, fmt=':')
-        _.plot(ax=ax)
-        ax.set_xlim(300, 1000)
+    #spe_pst  = from_chada(os.path.join(path_source,"pst_{}.cha".format(laser_wl)))    
+    
+    try:
+        #spe_pst_silcal = apply_calibration(spe_pst,spe_sil_calib)
+        #self calibration    
+        #spe_pst_calib = iter_calib(spe_pst_silcal, ref=rc2const.PST_RS_dict, prominence=1, wlen=100, n_iters=20)
+        #fig, ax = plt.subplots()
+        #spe_pst_silcal.plot(ax=ax, label='ne+sil calibrated')
+        #spe_pst_calib.plot(ax=ax, label='self calibrated')
+        #calibrated = spe_pst_calib
+        calibrated = spe_sil_calib
+        calibrated.write_cha(product["data"],"/calibrated")
+    except Exception as err:
+        print(err)
 else:
     print("laser wavelength {} not supported".format(laser_wl))    

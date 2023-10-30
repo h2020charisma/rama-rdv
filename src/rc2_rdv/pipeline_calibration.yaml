@@ -12,7 +12,10 @@ tasks:
       nb: "{{output_folder}}/calibration/calibration_load.ipynb"
       data: "{{output_folder}}/calibration/source"
     params:
-      laser_wl: "{{laser_wl4calibration}}"    
+      laser_wl: "{{laser_wl4calibration}}"
+      test_only: False    
+      neon_file: "C:\\Users\\jelia\\Nextcloud\\Projects\\CHARISMA\\altaxo vs ramanchada\\raw data\\785\\Ne_785_x20.txt"
+      silicon_file: "C:\\Users\\jelia\\Nextcloud\\Projects\\CHARISMA\\altaxo vs ramanchada\\raw data\\785\\S1N_Reflex785_Z020_005_10000msx2.txt"
 
   - source: tasks/calibration_apply.py
     product: 
@@ -20,3 +23,5 @@ tasks:
       data: "{{output_folder}}/calibration/results"
     params:
       laser_wl: "{{laser_wl4calibration}}"
+      test_only: False
+      input_file: "C:\\Users\\jelia\\Nextcloud\\Projects\\CHARISMA\\altaxo vs ramanchada\\raw data\\785\\NMIJ RM8158a 785_x20_10%_01.txt"
