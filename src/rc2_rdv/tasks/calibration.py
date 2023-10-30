@@ -11,7 +11,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 import os.path
-from ramanchada2.spectrum import from_chada
+from ramanchada2.spectrum import from_chada, Spectrum
+from ramanchada2.io.HSDS import read_cha
 
 
 
@@ -52,8 +53,12 @@ def calibrate(spe_neon,spe_sil,laser_wl=785,neon_wl=rc2const.neon_wl_785_nist_di
             ax[i].set_xlim(peak_silica-100, peak_silica+100)
 
     spe_sil.write_cha(product["data"],"/raw")
+    spe_sil._cachefile = product["data"]
+    #spe_sil.write_cache()   
+
     spe_sil_necal.write_cha(product["data"],"/calibrated_neon")    
     spe_sil_calib.write_cha(product["data"],"/calibrated_neon_sil")   
+    spe_sil_calib._cachefile = product["data"]
     spe_sil_calib.write_cache()         
     return spe_sil_calib
 
@@ -77,9 +82,18 @@ def peaks(spe_nCal_calib, prominence):
 
 #Path(product["data"]).mkdir(parents=True, exist_ok=True)
 path_source = upstream["calibration_load"]["data"]
-spe_neon = from_chada(os.path.join(path_source,"neon_{}.cha".format(laser_wl)))
-spe_sil  = from_chada(os.path.join(path_source,"sil_{}.cha".format(laser_wl)))
 
+spe = {}
+
+for _tag in ["neon","sil"]:
+    filename = os.path.join(path_source,"{}_{}.cha".format(_tag,laser_wl))
+    x, y, meta = read_cha(filename, dataset="/raw")
+    spe[_tag] = Spectrum(x=x, y=y, metadata=meta, cachefile = filename)  # type: ignore
+
+#spe_neon = from_chada(os.path.join(path_source,"neon_{}.cha".format(laser_wl)))
+#spe_sil  = from_chada(os.path.join(path_source,"sil_{}.cha".format(laser_wl)))
+spe_neon = spe["neon"]
+spe_sil  = spe["sil"]
 
 neon_wl = {
     785: rc2const.neon_wl_785_nist_dict,
