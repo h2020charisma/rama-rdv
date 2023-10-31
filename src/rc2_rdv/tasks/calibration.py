@@ -78,7 +78,7 @@ def calibrate(spe_neon,spe_sil,laser_wl=785,neon_wl=rc2const.neon_wl_785_nist_di
     spe_sil_necal.write_cha(product["data"],"/calibrated_neon")    
     spe_sil_calib.write_cha(product["data"],"/calibrated_neon_sil")   
     spe_sil_calib._cachefile = product["data"]
-    spe_sil_calib.write_cache()         
+    #spe_sil_calib.write_cache()         
     return spe_sil_calib
 
 #def plot_calibration():
@@ -127,6 +127,8 @@ if laser_wl in neon_wl:
         #calibrated = spe_pst_calib
         calibrated = spe_sil_calib
         calibrated.write_cha(product["data"],"/calibrated")
+        calibrated._cachefile = product["data"]
+        calibrated.write_cache()         
     except Exception as err:
         print(err)
 else:
