@@ -22,7 +22,7 @@ def plot_peaks_stem(ref_keys,ref_values,spe_keys,spe_values,spe=None):
     pst = rc2const.PST_RS_dict
     ref_stem = ax.stem(pst.keys(), pst.values(), linefmt='b-', label='reference')
     stem_plot = ax.twinx()
-    calibrated_stem = stem_plot.stem(df["center"], df["height"], linefmt='r-', markerfmt='ro', basefmt=' ')
+    calibrated_stem = stem_plot.stem(spe_keys, spe_values, linefmt='r-', markerfmt='ro', basefmt=' ')
     # Create custom legend elements
     legend_elements = [
         Line2D([0], [0], color='b', linestyle='-', label='reference'),
@@ -75,6 +75,8 @@ if test_only:
     spe_nCal = from_test_spe(sample=['nCAL'], provider=['FNMT'], OP=['03'], laser_wl=[str(laser_wl)])
 else:
     spe_nCal = from_local_file(input_file)
+    if min(spe_nCal.x)<0:
+        spe_nCal = spe_nCal.trim_axes(method='x-axis',boundaries=(0,max(spe_nCal.x)))      
 
 print("{} len={} [{},{}]".format(input_file,len(spe_nCal.x),min(spe_nCal.x),max(spe_nCal.x)))
 print(spe_nCal.meta["Original file"])
@@ -114,7 +116,7 @@ df.to_csv(os.path.join(product["data"],"peaks.csv"))
 if sample=="PST":
     pst = rc2const.PST_RS_dict
     plot_peaks_stem(pst.keys(), pst.values(),df["center"], df["height"] , spe_nCal_calib )    
-    
+
 if sample=="PST":
     pst = rc2const.PST_RS_dict
     plot_peaks_stem(pst.keys(), pst.values(),df["center"], df["height"] , spe_nCal )       

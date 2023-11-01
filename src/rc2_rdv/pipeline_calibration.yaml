@@ -3,7 +3,7 @@ tasks:
   - source: tasks/calibration.py
     product: 
       nb: "{{output_folder}}/calibration/calibration.ipynb"
-      data: "{{output_folder}}/calibration/calibration.cha"
+      data: "{{output_folder}}/calibration/calibration_{{laser_wl4calibration}}.cha"
     params:
       laser_wl: "{{laser_wl4calibration}}"
 
@@ -14,8 +14,8 @@ tasks:
     params:
       laser_wl: "{{laser_wl4calibration}}"
       test_only: False    
-      neon_file: "{{neon_file_785}}"
-      silicon_file: "{{silicon_file_785}}"
+      neon_file: "{{neon_file}}"
+      silicon_file: "{{silicon_file}}"
 
   - source: tasks/calibration_apply.py
     product: 
@@ -24,5 +24,5 @@ tasks:
     params:
       laser_wl: "{{laser_wl4calibration}}"
       test_only: False
-      input_file: "{{input_file_785}}"
+      input_file: "{{input_file}}"
       sample: "PST"
