@@ -82,6 +82,8 @@ print("{} len={} [{},{}]".format(input_file,len(spe_nCal.x),min(spe_nCal.x),max(
 print(spe_nCal.meta["Original file"])
 base_filename, _ = os.path.splitext(spe_nCal.meta["Original file"])
 spe_filename = os.path.join(product["data"],f"{base_filename}.cha")
+if os.path.exists(spe_filename):
+    os.remove(spe_filename)
 spe_nCal._cachefile = spe_filename
 spe_nCal.write_cha(spe_filename,dataset="/raw")
 

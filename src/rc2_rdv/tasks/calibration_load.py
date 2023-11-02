@@ -33,15 +33,25 @@ print("Silicon len={} [{},{}]".format(len(spe_sil.x),min(spe_sil.x),max(spe_sil.
 print("Neon len={} [{},{}]".format(len(spe_neon.x),min(spe_neon.x),max(spe_neon.x)))
 
 spe_neon_file = os.path.join(product["data"],"neon_{}.cha".format(laser_wl))
+if os.path.exists(spe_neon_file):
+    os.remove(spe_neon_file)
 spe_neon._cachefile = spe_neon_file
-spe_neon.write_cha(spe_neon_file,"/raw")
+spe_neon.write_cha(spe_neon_file,dataset = "/raw")
 spe_neon = spe_neon - spe_neon.moving_minimum(120)
 spe_neon.plot()
-spe_neon.write_cha(spe_neon_file,"/baseline")
+spe_neon.write_cha(spe_neon_file,dataset = "/baseline")
+assert min(spe_neon.x)>=0
 
 spe_sil_file = os.path.join(product["data"],"sil_{}.cha".format(laser_wl))
+if os.path.exists(spe_sil_file):
+    os.remove(spe_sil_file)
 spe_sil._cachefile = spe_sil_file
 spe_sil.write_cha(spe_sil_file,"/raw")
 spe_sil = spe_sil - spe_sil.moving_minimum(120)
 spe_sil.plot()
-spe_sil.write_cha(spe_sil_file,"/baseline")
+spe_sil.write_cha(spe_sil_file,dataset = "/baseline")
+assert min(spe_sil.x)>=0
+
+from ramanchada2.spectrum import from_chada
+spe = from_chada(spe_sil_file,dataset="/baseline")
+assert(min(spe.x)>=0)
