@@ -101,14 +101,14 @@ def calibrate(spe_neon,spe_sil,laser_wl=785,neon_wl=rc2const.neon_wl_785_nist_di
         for i in [0,1,2]:
             ax[i].set_xlim(peak_silica-100, peak_silica+100)
 
-    spe_sil._cachefile = product["data"]
+    #spe_sil._cachefile = product["data"]
     spe_sil.write_cha(product["data"],"/raw")
 
     #spe_sil.write_cache()   
-    spe_sil_necal._cachefile = product["data"]
+    #spe_sil_necal._cachefile = product["data"]
     spe_sil_necal.write_cha(product["data"],"/calibrated_neon")    
-    
-    spe_sil_calib._cachefile = product["data"]
+
+    #spe_sil_calib._cachefile = product["data"]
     spe_sil_calib.write_cha(product["data"],"/calibrated_neon_sil")   
 
     #spe_sil_calib.write_cache()         
@@ -160,7 +160,7 @@ if laser_wl in neon_wl:
         #spe_pst_calib.plot(ax=ax, label='self calibrated')
         #calibrated = spe_pst_calib
         calibrated = spe_sil_calib
-        calibrated._cachefile = product["data"]        
+        #calibrated._cachefile = product["data"]        
         calibrated.write_cha(product["data"],"/calibrated")
     
     except Exception as err:

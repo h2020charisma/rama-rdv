@@ -84,7 +84,7 @@ base_filename, _ = os.path.splitext(spe_nCal.meta["Original file"])
 spe_filename = os.path.join(product["data"],f"{base_filename}.cha")
 if os.path.exists(spe_filename):
     os.remove(spe_filename)
-spe_nCal._cachefile = spe_filename
+#spe_nCal._cachefile = spe_filename
 spe_nCal.write_cha(spe_filename,dataset="/raw")
 
 spe_nCal.plot()
