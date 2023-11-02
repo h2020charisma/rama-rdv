@@ -33,7 +33,7 @@ def plot_peaks_stem(ref_keys,ref_values,spe_keys,spe_values,spe=None):
     ax.legend(handles=legend_elements)
     ax.grid(True)
     if spe != None:
-        spe.plot(ax=ax.twinx())
+        spe.plot(ax=stem_plot)
     plt.show()
 
 def iter_calib(in_spe, ref, prominence, wlen, n_iters, poly_order=3):
@@ -88,9 +88,12 @@ def calibrate(spe_neon,spe_sil,laser_wl=785,neon_wl=rc2const.neon_wl_785_nist_di
     spe_neon_calib = spe_neon_wl_calib.abs_nm_to_shift_cm_1_filter(laser_wave_length_nm=laser_wl)
     print("spe_neon_calib",min(spe_neon_calib.x),max(spe_neon_calib.x))
     spe_neon_calib.plot(ax=ax[3], fmt='-', label='calibrated (rs)')    
-    spe_sil.plot(ax=ax[3].twinx(), fmt=':', label='sil')    
+
+    ax3_twin = ax[3].twinx()
+    spe_sil.plot(ax=ax3_twin, fmt=':', label='sil')    
     spe_sil_necal = apply_calibration(spe_sil,spe_neon_calib)
-    spe_sil_necal.plot(ax=ax[3].twinx(), fmt='r-', label='sil calibrated with neon')    
+    spe_sil_necal.plot(ax=ax3_twin, fmt='r-', label='sil calibrated with neon')    
+    print("spe_sil_necal",min(spe_sil_necal.x),max(spe_sil_necal.x))
     
     spe_sil_calib = iter_calib(spe_sil_necal, ref=[peak_silica], wlen=100, prominence=10, n_iters=1, poly_order=0)
     if plot:
@@ -100,7 +103,7 @@ def calibrate(spe_neon,spe_sil,laser_wl=785,neon_wl=rc2const.neon_wl_785_nist_di
         spe_sil_calib.plot(ax=ax[2], label='Sil calibrated',fmt=':',c='r')
         for i in [0,1,2]:
             ax[i].set_xlim(peak_silica-100, peak_silica+100)
-
+    print("spe_sil_calib",min(spe_sil_calib.x),max(spe_sil_calib.x))
     #spe_sil._cachefile = product["data"]
     spe_sil.write_cha(product["data"],"/raw")
 
@@ -133,7 +136,7 @@ for _tag in ["neon","sil"]:
     x, y, meta = read_cha(filename, dataset=dataset_to_process)
     assert min(x)>=0
     print(dataset_to_process,_tag,len(x),min(x),max(x))
-    spe[_tag] = Spectrum(x=x, y=y, metadata=meta, cachefile = filename)  # type: ignore
+    spe[_tag] = Spectrum(x=x, y=y, metadata=meta)  # type: ignore
 
 #spe_neon = from_chada(os.path.join(path_source,"neon_{}.cha".format(laser_wl)))
 #spe_sil  = from_chada(os.path.join(path_source,"sil_{}.cha".format(laser_wl)))

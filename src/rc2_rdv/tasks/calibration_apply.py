@@ -31,7 +31,7 @@ def plot_peaks_stem(ref_keys,ref_values,spe_keys,spe_values,spe=None):
     ax.legend(handles=legend_elements)
     ax.grid(True)
     if spe != None:
-        spe.plot(ax=ax.twinx())
+        spe.plot(ax=stem_plot)
     plt.show()
 
 def peaks(spe_nCal_calib, prominence, profile='Moffat'):
@@ -102,11 +102,11 @@ spe_nCal_calib.write_cha(spe_filename,dataset="/calibrated")
 profile = "Moffat"
 prominence = calibrated.y_noise*10
 cand, init_guess, fit_res = peaks(spe_nCal_calib,prominence = prominence,profile=profile)
-for _ in [cand, init_guess,fit_res]:
-    fig, ax = plt.subplots()
-    spe_nCal_calib.plot(ax=ax, fmt=':')
-    _.plot(ax=ax)
-    #ax.set_xlim(300, 1000)
+fig, ax = plt.subplots(3,1,figsize=(12, 4))
+data_list = [cand, init_guess, fit_res]
+for data, subplot in zip(data_list, ax):
+    spe_nCal_calib.plot(ax=subplot, fmt=':')
+    data.plot(ax=subplot)
 
 df = fit_res.to_dataframe_peaks()
 df["Original file"] = spe_nCal.meta["Original file"]
