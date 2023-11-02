@@ -51,6 +51,12 @@ def iter_calib(in_spe, ref, prominence, wlen, n_iters, poly_order=3):
         
     return tmp
 
+def derive_calibration(in_spe, ref, should_fit = False):
+    try:
+        return in_spe.xcal_fine_RBF(ref=ref, should_fit =should_fit)    
+    except Exception as err:
+        raise(err)
+
 def apply_calibration(spe,spe_calib ):
     try:
         assert len(spe.x) == len(spe_calib.x), ("x should have same resolution {} vs {}".format(len(spe.x),len(spe_calib.x)))
@@ -60,7 +66,7 @@ def apply_calibration(spe,spe_calib ):
     except Exception as err:
         _left = min(spe_calib.x) 
         _right = max(spe_calib.x)
-        spe =  spe.resample_NUDFT_filter(x_range=(_left if _left>0 else 0,_right), xnew_bins=len(spe_calib.x))
+        spe =  spe.resample_NUDFT_filter(x_range=(_left,_right), xnew_bins=len(spe_calib.x))
     spe.x = spe_calib.x
     return spe
 
@@ -71,13 +77,15 @@ def resample(spe_sil,spe_neon):
     return spe_sil.resample_NUDFT_filter(x_range=(xmin,xmax), xnew_bins=xnew_bins)
 
 def calibrate(spe_neon,spe_sil,laser_wl=785,neon_wl=rc2const.neon_wl_785_nist_dict,plot=True):
-    print(laser_wl)
-    peak_silica = 520.45
-    spe_neon_wl = spe_neon.shift_cm_1_to_abs_nm_filter(laser_wave_length_nm=laser_wl)
-    spe_neon_wl_calib = iter_calib(spe_neon_wl, ref=neon_wl, wlen=100, prominence=1, n_iters=10)
 
-    print(min(spe_neon_wl.x),max(spe_neon_wl.x))
-    fig, ax = plt.subplots(4,1,figsize=(12,6))
+
+    peak_silica = 520.45 # this is in Raman shift
+    spe_neon_wl = spe_neon.shift_cm_1_to_abs_nm_filter(laser_wave_length_nm=laser_wl)
+    #spe_neon_wl_calib = iter_calib(spe_neon_wl, ref=neon_wl, wlen=100, prominence=1, n_iters=100)
+    spe_neon_wl_calib = derive_calibration(spe_neon_wl, ref=neon_wl)
+
+    
+    fig, ax = plt.subplots(5,1,figsize=(12,6))
     spe_neon.plot(ax=ax[0], fmt=':', label='original')
 
     ax[1].stem(neon_wl.keys(), neon_wl.values(), label='reference (wl)',linefmt='r-', markerfmt='ro', basefmt=' ')
@@ -86,36 +94,39 @@ def calibrate(spe_neon,spe_sil,laser_wl=785,neon_wl=rc2const.neon_wl_785_nist_di
     spe_neon_wl_calib.plot(ax=ax[2].twinx(), fmt='-', label='calibrated (wl)')    
 
     spe_neon_calib = spe_neon_wl_calib.abs_nm_to_shift_cm_1_filter(laser_wave_length_nm=laser_wl)
-    print("spe_neon_calib",min(spe_neon_calib.x),max(spe_neon_calib.x))
-    spe_neon_calib.plot(ax=ax[3], fmt='-', label='calibrated (rs)')    
+    spe_neon_calib.plot(ax=ax[3], fmt='-', label='Neon calibrated (rs)')    
 
-    ax3_twin = ax[3].twinx()
-    spe_sil.plot(ax=ax3_twin, fmt=':', label='sil')    
+ 
+    spe_sil.plot(ax=ax[4], fmt=':', label='sil')    
+
     spe_sil_necal = apply_calibration(spe_sil,spe_neon_calib)
-    spe_sil_necal.plot(ax=ax3_twin, fmt='r-', label='sil calibrated with neon')    
+    spe_sil_necal.plot(ax=ax[4], fmt='r-', label='sil calibrated with neon')    
     print("spe_sil_necal",min(spe_sil_necal.x),max(spe_sil_necal.x))
     
-    spe_sil_calib = iter_calib(spe_sil_necal, ref=[peak_silica], wlen=100, prominence=10, n_iters=1, poly_order=0)
+    #spe_sil_calib = iter_calib(spe_sil_necal, ref=[peak_silica], wlen=100, prominence=10, n_iters=1, poly_order=0)
     if plot:
         fig, ax = plt.subplots(3,1,figsize=(12,4))
-        spe_sil.plot(ax=ax[0], label='Sil initial')
-        spe_sil_necal.plot(ax=ax[1], label='Sil neon calibrated',fmt='-')
-        spe_sil_calib.plot(ax=ax[2], label='Sil calibrated',fmt=':',c='r')
-        for i in [0,1,2]:
-            ax[i].set_xlim(peak_silica-100, peak_silica+100)
-    print("spe_sil_calib",min(spe_sil_calib.x),max(spe_sil_calib.x))
-    #spe_sil._cachefile = product["data"]
-    spe_sil.write_cha(product["data"],"/raw")
+        spe_sil.plot(ax=ax[0], label='Sil initial')  
+        spe_sil_necal.plot(ax=ax[1], label='Sil neon calibrated',fmt='-')        
+    try:
+        spe_sil_calib = derive_calibration(spe_sil_necal, ref=[peak_silica], should_fit= False)
+        if plot:
+            spe_sil_calib.plot(ax=ax[2], label='Sil calibrated',fmt=':',c='r')
+    #        for i in [0,1,2]:
+    #            ax[i].set_xlim(peak_silica-100, peak_silica+100)
+        print("spe_sil_calib",min(spe_sil_calib.x),max(spe_sil_calib.x))
+        #spe_sil._cachefile = product["data"]
+        spe_sil.write_cha(product["data"],"/raw")
+        #spe_sil.write_cache()   
+        #spe_sil_necal._cachefile = product["data"]
+        spe_sil_necal.write_cha(product["data"],"/calibrated_neon")    
+        #spe_sil_calib._cachefile = product["data"]
+        spe_sil_calib.write_cha(product["data"],"/calibrated_neon_sil")   
+        return spe_sil_calib
+    except Exception as err:
+        raise(err)
+     
 
-    #spe_sil.write_cache()   
-    #spe_sil_necal._cachefile = product["data"]
-    spe_sil_necal.write_cha(product["data"],"/calibrated_neon")    
-
-    #spe_sil_calib._cachefile = product["data"]
-    spe_sil_calib.write_cha(product["data"],"/calibrated_neon_sil")   
-
-    #spe_sil_calib.write_cache()         
-    return spe_sil_calib
 
 #def plot_calibration():
 #    fig, ax = plt.subplots()

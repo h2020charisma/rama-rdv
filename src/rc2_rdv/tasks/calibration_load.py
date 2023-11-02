@@ -38,6 +38,7 @@ if os.path.exists(spe_neon_file):
 spe_neon._cachefile = spe_neon_file
 spe_neon.write_cha(spe_neon_file,dataset = "/raw")
 spe_neon = spe_neon - spe_neon.moving_minimum(120)
+spe_neon = spe_neon.normalize()
 spe_neon.plot()
 spe_neon.write_cha(spe_neon_file,dataset = "/baseline")
 assert min(spe_neon.x)>=0
@@ -48,6 +49,7 @@ if os.path.exists(spe_sil_file):
 spe_sil._cachefile = spe_sil_file
 spe_sil.write_cha(spe_sil_file,"/raw")
 spe_sil = spe_sil - spe_sil.moving_minimum(120)
+spe_sil = spe_sil.normalize()
 spe_sil.plot()
 spe_sil.write_cha(spe_sil_file,dataset = "/baseline")
 assert min(spe_sil.x)>=0

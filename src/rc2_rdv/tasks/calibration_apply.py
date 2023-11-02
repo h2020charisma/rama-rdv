@@ -77,6 +77,8 @@ else:
     spe_nCal = from_local_file(input_file)
     if min(spe_nCal.x)<0:
         spe_nCal = spe_nCal.trim_axes(method='x-axis',boundaries=(0,max(spe_nCal.x)))      
+    spe_nCal = spe_nCal - spe_nCal.moving_minimum(120)
+    spe_nCal = spe_nCal.normalize()        
 
 print("{} len={} [{},{}]".format(input_file,len(spe_nCal.x),min(spe_nCal.x),max(spe_nCal.x)))
 print(spe_nCal.meta["Original file"])
