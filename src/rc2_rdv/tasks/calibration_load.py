@@ -37,7 +37,9 @@ if os.path.exists(spe_neon_file):
     os.remove(spe_neon_file)
 #spe_neon._cachefile = spe_neon_file
 spe_neon.write_cha(spe_neon_file,dataset = "/raw")
-spe_neon = spe_neon - spe_neon.moving_minimum(120)
+kwargs = {"niter" : 1000 }
+spe_neon = spe_neon.subtract_baseline_rc1_snip(**kwargs)
+#spe_neon = spe_neon - spe_neon.moving_minimum(120)
 spe_neon = spe_neon.normalize()
 spe_neon.plot()
 spe_neon.write_cha(spe_neon_file,dataset = "/baseline")
@@ -48,7 +50,8 @@ if os.path.exists(spe_sil_file):
     os.remove(spe_sil_file)
 #spe_sil._cachefile = spe_sil_file
 spe_sil.write_cha(spe_sil_file,"/raw")
-spe_sil = spe_sil - spe_sil.moving_minimum(120)
+spe_sil = spe_sil.subtract_baseline_rc1_snip(**kwargs)
+#spe_sil = spe_sil - spe_sil.moving_minimum(120)
 spe_sil = spe_sil.normalize()
 spe_sil.plot()
 spe_sil.write_cha(spe_sil_file,dataset = "/baseline")
