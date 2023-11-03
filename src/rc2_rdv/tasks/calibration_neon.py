@@ -11,8 +11,11 @@ import ramanchada2.misc.constants  as rc2const
 import matplotlib.pyplot as plt
 from sklearn.metrics.pairwise import euclidean_distances
 from matplotlib.lines import Line2D
+from pathlib import Path
 
+Path(product["data"]).mkdir(parents=True, exist_ok=True)
 
+noise_factor = 1.5
 neon_wl = {
     785: rc2const.neon_wl_785_nist_dict,
     633: rc2const.neon_wl_633_nist_dict,
@@ -101,10 +104,15 @@ def match_peaks(spe_pos_dict,ref):
     return (x_spe[sort_indices],x_reference[sort_indices],x_distance[sort_indices],df)
 
 
-def calibrate(spe,ref,find_kw={}):
-    find_kw = dict(sharpening=None)
+def calibrate(spe,ref,find_kw={},fit_peaks_kw={},should_fit = False):
+
     fig, ax = plt.subplots(1,1,figsize=(12,2))
-    spe_pos_dict = spe.find_peak_multipeak(**find_kw).get_pos_ampl_dict()  # type: ignore
+    if should_fit:
+        spe_pos_dict = spe.fit_peak_positions(center_err_threshold=1, 
+                            find_peaks_kw=find_kw,  fit_peaks_kw=fit_peaks_kw)  # type: ignore   
+    else:
+        find_kw = dict(sharpening=None)
+        spe_pos_dict = spe.find_peak_multipeak(**find_kw).get_pos_ampl_dict()  # type: ignore
     ax.stem(spe_pos_dict.keys(),spe_pos_dict.values(),linefmt='b-', basefmt=' ')
     ax.twinx().stem(ref.keys(),ref.values(),linefmt='r-', basefmt=' ')
    
@@ -147,7 +155,7 @@ for _tag in ["neon","sil"]:
 spe_neon = spe["neon"]
 spe_neon_wl = spe_neon.shift_cm_1_to_abs_nm_filter(laser_wave_length_nm=laser_wl)
 
-spe_neon_wl_calib, interp, df = calibrate(spe_neon_wl,ref=neon_wl[laser_wl])
+spe_neon_wl_calib, interp, df = calibrate(spe_neon_wl,ref=neon_wl[laser_wl],find_kw={},fit_peaks_kw={},should_fit = False)
 spe_neon_calib = spe_neon_wl_calib.abs_nm_to_shift_cm_1_filter(laser_wave_length_nm=laser_wl)
 
 fig, ax = plt.subplots(1,1,figsize=(12,2))
@@ -160,7 +168,8 @@ spe_sil.plot(label="sil original",ax=ax)
 spe_sil_ne_calib = spe_sil.__copy__() 
 spe_sil_ne_calib.x = interp(spe_sil.x.reshape(-1, 1))
 spe_sil_ne_calib.plot(ax = ax,label="sil ne calibrated")
-spe_sil_calib, offset_sil, df_sil = calibrate(spe_sil_ne_calib,ref={520.45:1})
+spe_sil_calib, offset_sil, df_sil = calibrate(spe_sil_ne_calib,ref={520.45:1},find_kw={},fit_peaks_kw={},should_fit=True)
+# sharpening='hht', strategy='topo'
 spe_sil_calib.plot(ax = ax,label="sil calibrated")
 ax.set_xlim(520-50,520+50)
 
@@ -170,8 +179,11 @@ spe_to_calibrate = from_local_file(input_file)
 
 
 if min(spe_to_calibrate.x)<0:
-    spe_to_calibrate = spe_to_calibrate.trim_axes(method='x-axis',boundaries=(0,max(spe_to_calibrate.x)))      
-spe_to_calibrate = spe_to_calibrate - spe_to_calibrate.moving_minimum(120)
+    spe_to_calibrate = spe_to_calibrate.trim_axes(method='x-axis',boundaries=(0,max(spe_to_calibrate.x)))     
+
+kwargs = {"niter" : 1000 }
+spe_to_calibrate = spe_to_calibrate.subtract_baseline_rc1_snip(**kwargs)
+#spe_to_calibrate = spe_to_calibrate - spe_to_calibrate.moving_minimum(120)
 spe_to_calibrate = spe_to_calibrate.normalize()       
 
 
@@ -187,8 +199,8 @@ spe_calibrated_sil.plot(ax=ax,label="Ne+Si calibrated")
 
 
 
-def peaks(spe_nCal_calib, prominence, profile='Moffat'):
-    cand = spe_nCal_calib.find_peak_multipeak(prominence=prominence, wlen=300, width=1)
+def peaks(spe_nCal_calib, prominence, profile='Gaussian',wlen=300, width=1):
+    cand = spe_nCal_calib.find_peak_multipeak(prominence=prominence, wlen=wlen, width=width)
     init_guess = spe_nCal_calib.fit_peak_multimodel(profile=profile, candidates=cand, no_fit=True)
     fit_res = spe_nCal_calib.fit_peak_multimodel(profile=profile, candidates=cand)
     return cand, init_guess, fit_res
@@ -210,29 +222,40 @@ def plot_peaks_stem(ref_keys,ref_values,spe_keys,spe_values,spe=None, label="cal
         spe.plot(ax=stem_plot,label=label)
     plt.show()
 
-
-
-cand, init_guess, fit_res = peaks(spe_calibrated_sil,prominence = spe_sil_calib.y_noise*1.5)
+profile = "Voigt"
+wlen = 50
+width = 3
+prominence = max(spe_sil_calib.y)*.01
+cand, init_guess, fit_res = peaks(spe_calibrated_sil,prominence = prominence,profile=profile,wlen=wlen,width=width)
 fig, ax = plt.subplots(3,1,figsize=(12, 4))
 data_list = [cand, init_guess, fit_res]
 for data, subplot in zip(data_list, ax):
     spe_calibrated_sil.plot(ax=subplot, fmt=':')
     data.plot(ax=subplot)
 
-df = fit_res.to_dataframe_peaks()
-df["Original file"] = spe_to_calibrate.meta["Original file"]
-df[['group', 'peak']] = df.index.to_series().str.split('_', expand=True)
-#df["profile"] = profile
-#df["prominence"] = prominence
-#df.to_csv(os.path.join(product["data"],"peaks.csv"))
+#original spectrum to be calibrated
+cand_0, init_guess_0, fit_res_0 = peaks(spe_to_calibrate,prominence = prominence,profile=profile,wlen=wlen,width=width)
+fig, ax = plt.subplots(3,1,figsize=(12, 4))
+data_list = [cand_0, init_guess_0, fit_res_0 ]
+for data, subplot in zip(data_list, ax):
+    spe_calibrated_sil.plot(ax=subplot, fmt=':')
+    data.plot(ax=subplot)
+
+df_peaks = fit_res.to_dataframe_peaks()
+df_peaks["Original file"] = spe_to_calibrate.meta["Original file"]
+df_peaks[['group', 'peak']] = df_peaks.index.to_series().str.split('_', expand=True)
+df_peaks["param_profile"] = profile
+df_peaks["param_wlen"] = wlen
+df_peaks["param_prominence"] = prominence
+df_peaks.to_csv(os.path.join(product["data"],spe_to_calibrate.meta["Original file"]+".csv"))
 
 
 sample = "PST"
 if sample=="PST":
     pst = rc2const.PST_RS_dict
-    plot_peaks_stem(pst.keys(), pst.values(),df["center"], df["height"] , spe_calibrated_sil ,label="calibrated")      
-    plot_peaks_stem(pst.keys(), pst.values(),df["center"], df["height"] , spe_to_calibrate , label="original")        
-    cand_0, init_guess_0, fit_res_0 = peaks(spe_to_calibrate,prominence = spe_to_calibrate.y_noise*1.5)
+    plot_peaks_stem(pst.keys(), pst.values(),df_peaks["center"], df_peaks["height"] , spe_calibrated_sil ,label="calibrated")      
+    plot_peaks_stem(pst.keys(), pst.values(),df_peaks["center"], df_peaks["height"] , spe_to_calibrate , label="original")        
+
     x_sample,x_reference,x_distance,df = match_peaks(cand_0.get_pos_ampl_dict(),pst)
     sum_of_distances = np.sum(x_distance) / len(x_sample)
     sum_of_differences = np.sum(np.abs(x_sample - x_reference)) / len(x_sample)

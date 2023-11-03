@@ -30,6 +30,7 @@ tasks:
   - source: tasks/calibration_neon.py
     product: 
       nb: "{{output_folder}}/calibration/calibration_neon.ipynb"
+      data:  "{{output_folder}}/calibration/test"
     params:
       laser_wl: "{{laser_wl4calibration}}"
       input_file: "{{input_file}}"
