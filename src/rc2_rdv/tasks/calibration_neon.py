@@ -42,7 +42,31 @@ def apply_calibration(spe,spe_calib ):
     return spe
     
 
-def match_peaks(df):
+def match_peaks(spe_pos_dict,ref):
+    min_value = min(ref.values())
+    max_value = max(ref.values())    
+    if len(ref.keys())>1:
+        normalized_ref = {key: (value - min_value) / (max_value - min_value) for key, value in ref.items()}
+    else:
+        normalized_ref = ref
+    data_list = [
+        {'Wavelength': key, 'Intensity': value, 'Source': 'spe'} for key, value in spe_pos_dict.items()
+    ] + [
+        {'Wavelength': key, 'Intensity': value, 'Source': 'reference'} for key, value in normalized_ref.items()
+    ]
+
+    # Create a DataFrame from the list of dictionaries
+    df = pd.DataFrame(data_list)
+    feature_matrix = df[['Wavelength', 'Intensity']].to_numpy()
+
+    n_ref = len(ref.keys())
+    n_spe = len(spe_pos_dict.keys())
+    kmeans = KMeans(n_clusters=n_ref if n_ref>n_spe else n_spe )
+    kmeans.fit(feature_matrix)
+    labels = kmeans.labels_
+    # Extract cluster labels, x values, and y values
+    df['Cluster'] = labels
+#..
     grouped = df.groupby('Cluster')
     x_spe = np.array([])
     x_reference = np.array([])
@@ -73,47 +97,23 @@ def match_peaks(df):
                 x_distance = np.append(x_distance,e_min)
                 clusters = np.append(clusters, cluster)
         #group by spe and get min distance o
-    return (x_spe,x_reference,x_distance)
+    sort_indices = np.argsort(x_spe)        
+    return (x_spe[sort_indices],x_reference[sort_indices],x_distance[sort_indices],df)
 
 
 def calibrate(spe,ref,find_kw={}):
-    print(ref)
-    min_value = min(ref.values())
-    max_value = max(ref.values())
     find_kw = dict(sharpening=None)
-    # Normalize the values and store them in a new dictionary
-    if len(ref.keys())>1:
-        normalized_ref = {key: (value - min_value) / (max_value - min_value) for key, value in ref.items()}
-    else:
-        normalized_ref = ref
-        
     fig, ax = plt.subplots(1,1,figsize=(12,2))
     spe_pos_dict = spe.find_peak_multipeak(**find_kw).get_pos_ampl_dict()  # type: ignore
     ax.stem(spe_pos_dict.keys(),spe_pos_dict.values(),linefmt='b-', basefmt=' ')
     ax.twinx().stem(ref.keys(),ref.values(),linefmt='r-', basefmt=' ')
-    
-    data_list = [
-        {'Wavelength': key, 'Intensity': value, 'Source': 'spe'} for key, value in spe_pos_dict.items()
-    ] + [
-        {'Wavelength': key, 'Intensity': value, 'Source': 'reference'} for key, value in normalized_ref.items()
-    ]
-
-    # Create a DataFrame from the list of dictionaries
-    df = pd.DataFrame(data_list)
-    feature_matrix = df[['Wavelength', 'Intensity']].to_numpy()
-
-    n_ref = len(ref.keys())
-    n_spe = len(spe_pos_dict.keys())
-    kmeans = KMeans(n_clusters=n_ref if n_ref>n_spe else n_spe )
-    kmeans.fit(feature_matrix)
-    labels = kmeans.labels_
-    # Extract cluster labels, x values, and y values
-    df['Cluster'] = labels
-    print(df)
-    x_spe,x_reference,x_distance = match_peaks(df)
-    print(x_spe,x_reference,x_distance)
+   
+    x_spe,x_reference,x_distance,df = match_peaks(spe_pos_dict,ref)
+    sum_of_differences = np.sum(np.abs(x_spe - x_reference)) / len(x_spe)
+    print("sum_of_differences original ",sum_of_differences)
     if len(x_reference)==1:
         _offset = ( x_reference[0] - x_spe[0])
+        print("ref",x_reference[0],"sample", x_spe[0],"offset", _offset)
         new_x = spe.x + _offset
         spe_calib = spe.__copy__() 
         spe_calib.x = new_x   
@@ -132,7 +132,7 @@ def calibrate(spe,ref,find_kw={}):
             raise(err)
 
 
-
+#start
 
 
 
@@ -162,6 +162,7 @@ spe_sil_ne_calib.x = interp(spe_sil.x.reshape(-1, 1))
 spe_sil_ne_calib.plot(ax = ax,label="sil ne calibrated")
 spe_sil_calib, offset_sil, df_sil = calibrate(spe_sil_ne_calib,ref={520.45:1})
 spe_sil_calib.plot(ax = ax,label="sil calibrated")
+ax.set_xlim(520-50,520+50)
 
 # apply
 
@@ -209,7 +210,9 @@ def plot_peaks_stem(ref_keys,ref_values,spe_keys,spe_values,spe=None, label="cal
         spe.plot(ax=stem_plot,label=label)
     plt.show()
 
-cand, init_guess, fit_res = peaks(spe_calibrated_sil,prominence = spe_sil_calib.y_noise*10)
+
+
+cand, init_guess, fit_res = peaks(spe_calibrated_sil,prominence = spe_sil_calib.y_noise*1.5)
 fig, ax = plt.subplots(3,1,figsize=(12, 4))
 data_list = [cand, init_guess, fit_res]
 for data, subplot in zip(data_list, ax):
@@ -222,10 +225,19 @@ df[['group', 'peak']] = df.index.to_series().str.split('_', expand=True)
 #df["profile"] = profile
 #df["prominence"] = prominence
 #df.to_csv(os.path.join(product["data"],"peaks.csv"))
-df
+
 
 sample = "PST"
 if sample=="PST":
     pst = rc2const.PST_RS_dict
     plot_peaks_stem(pst.keys(), pst.values(),df["center"], df["height"] , spe_calibrated_sil ,label="calibrated")      
     plot_peaks_stem(pst.keys(), pst.values(),df["center"], df["height"] , spe_to_calibrate , label="original")        
+    cand_0, init_guess_0, fit_res_0 = peaks(spe_to_calibrate,prominence = spe_to_calibrate.y_noise*1.5)
+    x_sample,x_reference,x_distance,df = match_peaks(cand_0.get_pos_ampl_dict(),pst)
+    sum_of_distances = np.sum(x_distance) / len(x_sample)
+    sum_of_differences = np.sum(np.abs(x_sample - x_reference)) / len(x_sample)
+    print("original sum of diff",sum_of_differences,"original sum of distances",sum_of_distances,len(x_sample),list(zip(x_sample,x_reference)))    
+    x_sample,x_reference,x_distance,df = match_peaks(cand.get_pos_ampl_dict(),pst)
+    sum_of_differences = np.sum(np.abs(x_sample - x_reference)) / len(x_sample)
+    sum_of_distances = np.sum(x_distance) / len(x_sample)
+    print("calibrated sum of diff",sum_of_differences,"calibrated sum of distances",sum_of_distances,len(x_sample),list(zip(x_sample,x_reference)))
