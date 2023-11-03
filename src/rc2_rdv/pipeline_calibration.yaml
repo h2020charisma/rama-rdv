@@ -26,3 +26,10 @@ tasks:
       test_only: False
       input_file: "{{input_file}}"
       sample: "PST"
+
+  - source: tasks/calibration_neon.py
+    product: 
+      nb: "{{output_folder}}/calibration/calibration_neon.ipynb"
+    params:
+      laser_wl: "{{laser_wl4calibration}}"
+      input_file: "{{input_file}}"
