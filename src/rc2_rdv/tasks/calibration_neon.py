@@ -3,6 +3,7 @@ upstream = ["calibration_load"]
 product = None
 laser_wl = None
 input_file = None
+prominence_coeff = 5
 # -
 
 import os.path
@@ -31,7 +32,7 @@ import numpy as np
 import pandas as pd
 from scipy import interpolate
 
-def apply_calibration(spe,spe_calib ):
+def set_x_axis(spe,spe_calib ):
     try:
         assert len(spe.x) == len(spe_calib.x), ("x should have same resolution {} vs {}".format(len(spe.x),len(spe_calib.x)))
         assert min(spe.x) == min(spe_calib.x), ("x should have same start value {} vs {}".format(min(spe.x),min(spe_calib.x)))
@@ -106,41 +107,74 @@ def match_peaks(spe_pos_dict,ref):
     sort_indices = np.argsort(x_spe)        
     return (x_spe[sort_indices],x_reference[sort_indices],x_distance[sort_indices],df)
 
+def apply_calibration(laser_wl,spe, interp=None, offset=0,spe_units="cm-1",model_units="nm"):
+    print("apply_calibration laser_wl {} spe ({}) model ({}) interp {} offset {}".format(laser_wl,spe_units,model_units,interp,offset))
+    if spe_units==model_units:
+        spe_to_calibrate = spe.__copy__()
+    else:
+        if model_units == "nm":
+            spe_to_calibrate = spe.shift_cm_1_to_abs_nm_filter(laser_wave_length_nm=laser_wl)     
+        else:
+            spe_to_calibrate =  spe.abs_nm_to_shift_cm_1_filter(laser_wave_length_nm=laser_wl)
+    if interp != None:
+        spe_to_calibrate.x = interp(spe_to_calibrate.x.reshape(-1, 1)) 
+    spe_to_calibrate.x = spe_to_calibrate.x + offset
+    #convert back
+    if spe_units==model_units:
+        return spe_to_calibrate
+    else:
+        if model_units == "nm":
+            return spe_to_calibrate.abs_nm_to_shift_cm_1_filter(laser_wave_length_nm=laser_wl)
+        else:
+            return spe.shift_cm_1_to_abs_nm_filter(laser_wave_length_nm=laser_wl)      
 
-def calibrate(spe,ref,find_kw={},fit_peaks_kw={},should_fit = False):
+def calibration_model(spe,ref,spe_units="cm-1",ref_units="nm",find_kw={},fit_peaks_kw={},should_fit = False):
+    print("calibration_model laser_wl {} spe ({}) reference ({})".format(laser_wl,spe_units,ref_units))
+     
+    #convert to ref_units
+    spe_to_process = None #spe_to_process.__copy__()
+    if ref_units == "nm":
+        if spe_units != "nm":
+            spe_to_process = spe.shift_cm_1_to_abs_nm_filter(laser_wave_length_nm=laser_wl)
+    else: #assume cm-1
+        if spe_units != "cm-1":
+            spe_to_process = spe.abs_nm_to_shift_cm_1_filter(laser_wave_length_nm=laser_wl)
 
-    fig, ax = plt.subplots(1,1,figsize=(12,2))
+    if spe_to_process is None:
+       spe_to_process = spe.__copy__() 
+
+    fig, ax = plt.subplots(3,1,figsize=(12,4))
+    spe.plot(ax=ax[0].twinx(),label=spe_units)    
+    spe_to_process.plot(ax=ax[1],label=ref_units)
+    
     if should_fit:
-        spe_pos_dict = spe.fit_peak_positions(center_err_threshold=1, 
+        spe_pos_dict = spe_to_process.fit_peak_positions(center_err_threshold=1, 
                             find_peaks_kw=find_kw,  fit_peaks_kw=fit_peaks_kw)  # type: ignore   
     else:
         find_kw = dict(sharpening=None)
-        spe_pos_dict = spe.find_peak_multipeak(**find_kw).get_pos_ampl_dict()  # type: ignore
-    ax.stem(spe_pos_dict.keys(),spe_pos_dict.values(),linefmt='b-', basefmt=' ')
-    ax.twinx().stem(ref.keys(),ref.values(),linefmt='r-', basefmt=' ')
+        spe_pos_dict = spe_to_process.find_peak_multipeak(**find_kw).get_pos_ampl_dict()  # type: ignore
+
+    ax[2].stem(spe_pos_dict.keys(),spe_pos_dict.values(),linefmt='b-', basefmt=' ')
+    ax[2].twinx().stem(ref.keys(),ref.values(),linefmt='r-', basefmt=' ')
    
     x_spe,x_reference,x_distance,df = match_peaks(spe_pos_dict,ref)
     sum_of_differences = np.sum(np.abs(x_spe - x_reference)) / len(x_spe)
-    print("sum_of_differences original ",sum_of_differences)
+    print("sum_of_differences original ",sum_of_differences, ref_units)
     if len(x_reference)==1:
         _offset = ( x_reference[0] - x_spe[0])
-        print("ref",x_reference[0],"sample", x_spe[0],"offset", _offset)
-        new_x = spe.x + _offset
-        spe_calib = spe.__copy__() 
-        spe_calib.x = new_x   
-        return (spe_calib, _offset , df)
+        print("ref",x_reference[0],"sample", x_spe[0],"offset", _offset, ref_units)
+        return ( _offset ,ref_units, df)
     else:
-        plt.figure()
-        plt.scatter(x_spe,x_reference,marker='o')
+        fig, ax = plt.subplots(1,1,figsize=(3,3))
+        ax.scatter(x_spe,x_reference,marker='o')
+        ax.set_xlabel("spectrum x ".format(ref_units))
+        ax.set_ylabel("reference x ".format(ref_units))
         try:
             kwargs = {"kernel" : "thin_plate_spline"}
-            interp = interpolate.RBFInterpolator(x_spe.reshape(-1, 1),x_reference,**kwargs)
-            new_x = interp(spe.x.reshape(-1, 1))
-            spe_calib = spe.__copy__() 
-            spe_calib.x = new_x    
-            return (spe_calib, interp, df)
+            return (interpolate.RBFInterpolator(x_spe.reshape(-1, 1),x_reference,**kwargs) ,ref_units,  df)
         except Exception as err:
             raise(err)
+
 
 
 #start
@@ -156,51 +190,47 @@ for _tag in ["neon","sil"]:
 
 
 spe_neon = spe["neon"]
-spe_neon_wl = spe_neon.shift_cm_1_to_abs_nm_filter(laser_wave_length_nm=laser_wl)
 
-spe_neon_wl_calib, interp, df = calibrate(spe_neon_wl,ref=neon_wl[laser_wl],find_kw={},fit_peaks_kw={},should_fit = False)
-spe_neon_calib = spe_neon_wl_calib.abs_nm_to_shift_cm_1_filter(laser_wave_length_nm=laser_wl)
+interp, model_units, df = calibration_model(spe_neon,ref=neon_wl[laser_wl],spe_units="cm-1",ref_units="nm",find_kw={},fit_peaks_kw={},should_fit = False)
 
+spe_neon_calib = apply_calibration(laser_wl,spe_neon,interp,0,spe_units="cm-1",model_units=model_units)
 fig, ax = plt.subplots(1,1,figsize=(12,2))
 spe_neon.plot(ax=ax,label='original')
 spe_neon_calib.plot(ax=ax,color='r',label='calibrated')
 
-fig, ax =plt.subplots(1,1,figsize=(12,4))
+
 spe_sil = spe["sil"]
-spe_sil.plot(label="sil original",ax=ax)
-spe_sil_ne_calib = spe_sil.__copy__() 
-spe_sil_ne_calib.x = interp(spe_sil.x.reshape(-1, 1))
-spe_sil_ne_calib.plot(ax = ax,label="sil ne calibrated")
-spe_sil_calib, offset_sil, df_sil = calibrate(spe_sil_ne_calib,ref={520.45:1},find_kw={},fit_peaks_kw={},should_fit=True)
-# sharpening='hht', strategy='topo'
-spe_sil_calib.plot(ax = ax,label="sil calibrated")
-ax.set_xlim(520-50,520+50)
+spe_sil_ne_calib = apply_calibration(laser_wl,spe_sil,interp,0,spe_units="cm-1",model_units=model_units)
+offset_sil, model_units_sil, df_sil = calibration_model(spe_sil_ne_calib,ref={520.45:1},spe_units="cm-1",ref_units="cm-1",find_kw={},fit_peaks_kw={},should_fit=True)
+spe_sil_calib = apply_calibration(laser_wl,spe_sil_ne_calib,None,offset_sil,spe_units="cm-1",model_units=model_units_sil)
+
+fig, ax =plt.subplots(2,1,figsize=(12,4))
+spe_sil.plot(label="sil original",ax=ax[0])
+spe_sil_ne_calib.plot(ax = ax[0],label="sil ne calibrated")
+spe_sil_calib.plot(ax = ax[0],label="sil calibrated")
+spe_sil.plot(label="sil original",ax=ax[1])
+spe_sil_ne_calib.plot(ax = ax[1],label="sil ne calibrated")
+spe_sil_calib.plot(ax = ax[1],label="sil calibrated")
+ax[1].set_xlim(520.45-100,520.45+100)
 
 # apply
 
 spe_to_calibrate = from_local_file(input_file)
-
-
 if min(spe_to_calibrate.x)<0:
     spe_to_calibrate = spe_to_calibrate.trim_axes(method='x-axis',boundaries=(0,max(spe_to_calibrate.x)))     
-
 kwargs = {"niter" : 40 }
 spe_to_calibrate = spe_to_calibrate.subtract_baseline_rc1_snip(**kwargs)
 #spe_to_calibrate = spe_to_calibrate - spe_to_calibrate.moving_minimum(120)
 #spe_to_calibrate = spe_to_calibrate.normalize()       
 
 
-spe_calibrated_ne = spe_to_calibrate.__copy__() 
-spe_calibrated_ne.x = interp(spe_calibrated_ne.x.reshape(-1, 1))
-spe_calibrated_sil = spe_calibrated_ne.__copy__() 
-spe_calibrated_sil.x = spe_calibrated_sil.x + offset_sil
+spe_calibrated_ne = apply_calibration(laser_wl,spe_to_calibrate,interp,0,spe_units="cm-1",model_units=model_units)
+spe_calibrated_sil = apply_calibration(laser_wl,spe_calibrated_ne,None,offset_sil,spe_units="cm-1",model_units=model_units_sil)
 
 fig, ax = plt.subplots(1,1,figsize=(12,2))
 spe_to_calibrate.plot(ax=ax,label = "original")
 spe_calibrated_ne.plot(ax=ax,label="Si calibrated")
 spe_calibrated_sil.plot(ax=ax,label="Ne+Si calibrated")
-
-
 
 def peaks(spe_nCal_calib, prominence, profile='Gaussian',wlen=300, width=1):
     cand = spe_nCal_calib.find_peak_multipeak(prominence=prominence, wlen=wlen, width=width)
@@ -228,8 +258,8 @@ def plot_peaks_stem(ref_keys,ref_values,spe_keys,spe_values,spe=None, label="cal
 profile = "Voigt"
 wlen = 50
 width = 3
-prominence = 2.5
-cand, init_guess, fit_res = peaks(spe_calibrated_sil,prominence = spe_calibrated_sil.y_noise*prominence,profile=profile,wlen=wlen,width=width)
+
+cand, init_guess, fit_res = peaks(spe_calibrated_sil,prominence = spe_calibrated_sil.y_noise*prominence_coeff,profile=profile,wlen=wlen,width=width)
 fig, ax = plt.subplots(3,1,figsize=(12, 4))
 data_list = [cand, init_guess, fit_res]
 for data, subplot in zip(data_list, ax):
@@ -237,7 +267,7 @@ for data, subplot in zip(data_list, ax):
     data.plot(ax=subplot)
 
 #original spectrum to be calibrated
-cand_0, init_guess_0, fit_res_0 = peaks(spe_to_calibrate,prominence = spe_to_calibrate.y_noise*prominence,profile=profile,wlen=wlen,width=width)
+cand_0, init_guess_0, fit_res_0 = peaks(spe_to_calibrate,prominence = spe_to_calibrate.y_noise*prominence_coeff,profile=profile,wlen=wlen,width=width)
 fig, ax = plt.subplots(3,1,figsize=(12, 4))
 data_list = [cand_0, init_guess_0, fit_res_0 ]
 for data, subplot in zip(data_list, ax):
@@ -250,7 +280,7 @@ df_peaks[['group', 'peak']] = df_peaks.index.to_series().str.split('_', expand=T
 df_peaks["param_profile"] = profile
 df_peaks["param_wlen"] = wlen
 df_peaks["param_width"] = width
-df_peaks["param_prominence"] = spe_calibrated_sil.y_noise*prominence
+df_peaks["param_prominence"] = spe_calibrated_sil.y_noise*prominence_coeff
 df_peaks.to_csv(os.path.join(product["data"],spe_to_calibrate.meta["Original file"]+".csv"))
 
 

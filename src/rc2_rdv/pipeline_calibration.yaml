@@ -34,3 +34,4 @@ tasks:
     params:
       laser_wl: "{{laser_wl4calibration}}"
       input_file: "{{input_file}}"
+      prominence_coeff: "{{prominence_coeff}}"
