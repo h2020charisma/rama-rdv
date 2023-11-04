@@ -13,6 +13,8 @@ import matplotlib.pyplot as plt
 from sklearn.metrics.pairwise import euclidean_distances
 from matplotlib.lines import Line2D
 from pathlib import Path
+from ramanchada2.spectrum.calibration.calibration_model import apply_calibration as apply_calibration_x
+
 
 Path(product["data"]).mkdir(parents=True, exist_ok=True)
 
@@ -135,7 +137,7 @@ def peaks(spe_nCal_calib, prominence, profile='Gaussian',wlen=300, width=1):
     fit_res = spe_nCal_calib.fit_peak_multimodel(profile=profile, candidates=cand)
     return cand, init_guess, fit_res
 
-def calibration_model(spe,ref,spe_units="cm-1",ref_units="nm",find_kw={},fit_peaks_kw={},should_fit = False):
+def calibration_model_x(laser_wl,spe,ref,spe_units="cm-1",ref_units="nm",find_kw={},fit_peaks_kw={},should_fit = False):
     print("calibration_model laser_wl {} spe ({}) reference ({})".format(laser_wl,spe_units,ref_units))
     #convert to ref_units
     spe_to_process = None #spe_to_process.__copy__()
@@ -160,7 +162,7 @@ def calibration_model(spe,ref,spe_units="cm-1",ref_units="nm",find_kw={},fit_pea
     #prominence=prominence, wlen=wlen, width=width
     find_kw = dict(sharpening=None)
     if should_fit:
-        spe_pos_dict = spe_to_process.fit_peak_positions(center_err_threshold=1, 
+        spe_pos_dict = spe_to_process.fit_peak_positions(center_err_threshold=10, 
                             find_peaks_kw=find_kw,  fit_peaks_kw=fit_peaks_kw)  # type: ignore           
         #fit_res = spe_to_process.fit_peak_multimodel(candidates=cand,**fit_peaks_kw)
         #pos, amp = fit_res.center_amplitude(threshold=1)
@@ -207,26 +209,29 @@ for _tag in ["neon","sil"]:
 
 spe_neon = spe["neon"]
 #Gaussian
-interp, model_units, df = calibration_model(spe_neon,ref=neon_wl[laser_wl],spe_units="cm-1",ref_units="nm",find_kw={},fit_peaks_kw={"profile":"Gaussian"},should_fit = False)
+interp, model_units, df = calibration_model_x(laser_wl,spe_neon,ref=neon_wl[laser_wl],spe_units="cm-1",ref_units="nm",find_kw={},fit_peaks_kw={"profile":"Gaussian"},should_fit = False)
 df.to_csv(os.path.join(product["data"],"matched_peaks_"+spe_neon.meta["Original file"]+".csv"),index=False)
 df 
 
-spe_neon_calib = apply_calibration(laser_wl,spe_neon,interp,0,spe_units="cm-1",model_units=model_units)
+#spe_neon_calib = apply_calibration(laser_wl,spe_neon,interp,0,spe_units="cm-1",model_units=model_units)
+spe_neon_calib = apply_calibration_x(spe_neon,laser_wl,interp,0,spe_units="cm-1",model_units=model_units)
 fig, ax = plt.subplots(1,1,figsize=(12,2))
 spe_neon.plot(ax=ax,label='original')
 spe_neon_calib.plot(ax=ax,color='r',label='calibrated',fmt=':')
 
 
 spe_sil = spe["sil"]
-spe_sil_ne_calib = apply_calibration(laser_wl,spe_sil,interp,0,spe_units="cm-1",model_units=model_units)
+#spe_sil_ne_calib = apply_calibration(laser_wl,spe_sil,interp,0,spe_units="cm-1",model_units=model_units)
+spe_sil_ne_calib = apply_calibration_x(spe_sil,laser_wl,interp,0,spe_units="cm-1",model_units=model_units)
 
 #"profile":"Pearson4" by D3.3, default is gaussian!
-offset_sil, model_units_sil, df_sil = calibration_model(spe_sil_ne_calib,ref={520.45:1},spe_units="cm-1",ref_units="cm-1",find_kw={},fit_peaks_kw={},should_fit=True)
+offset_sil, model_units_sil, df_sil = calibration_model_x(laser_wl,spe_sil_ne_calib,ref={520.45:1},spe_units="cm-1",ref_units="cm-1",find_kw={},fit_peaks_kw={},should_fit=True)
 df_sil.to_csv(os.path.join(product["data"],"matched_peaks_"+spe_sil.meta["Original file"]+".csv"),index=False)
 df_sil
 
 
-spe_sil_calib = apply_calibration(laser_wl,spe_sil_ne_calib,None,offset_sil,spe_units="cm-1",model_units=model_units_sil)
+#spe_sil_calib = apply_calibration(laser_wl,spe_sil_ne_calib,None,offset_sil,spe_units="cm-1",model_units=model_units_sil)
+spe_sil_calib = apply_calibration_x(spe_sil_ne_calib,laser_wl,None,offset_sil,spe_units="cm-1",model_units=model_units_sil)
 
 fig, ax =plt.subplots(2,1,figsize=(12,4))
 spe_sil.plot(ax=ax[0],label="sil original")
@@ -248,8 +253,11 @@ spe_to_calibrate = spe_to_calibrate.subtract_baseline_rc1_snip(**kwargs)
 #spe_to_calibrate = spe_to_calibrate.normalize()       
 
 
-spe_calibrated_ne = apply_calibration(laser_wl,spe_to_calibrate,interp,0,spe_units="cm-1",model_units=model_units)
-spe_calibrated_sil = apply_calibration(laser_wl,spe_calibrated_ne,None,offset_sil,spe_units="cm-1",model_units=model_units_sil)
+#spe_calibrated_ne = apply_calibration(laser_wl,spe_to_calibrate,interp,0,spe_units="cm-1",model_units=model_units)
+spe_calibrated_ne = apply_calibration_x(spe_to_calibrate,laser_wl,interp,0,spe_units="cm-1",model_units=model_units)
+
+#spe_calibrated_sil = apply_calibration(laser_wl,spe_calibrated_ne,None,offset_sil,spe_units="cm-1",model_units=model_units_sil)
+spe_calibrated_sil = apply_calibration_x(spe_calibrated_ne,laser_wl,None,offset_sil,spe_units="cm-1",model_units=model_units_sil)
 
 fig, ax = plt.subplots(1,1,figsize=(12,2))
 spe_to_calibrate.plot(ax=ax,label = "original")
