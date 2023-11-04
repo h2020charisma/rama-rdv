@@ -37,12 +37,14 @@ if os.path.exists(spe_neon_file):
     os.remove(spe_neon_file)
 #spe_neon._cachefile = spe_neon_file
 spe_neon.write_cha(spe_neon_file,dataset = "/raw")
-kwargs = {"niter" : 1000 }
+kwargs = {"niter" : 40 }
 spe_neon = spe_neon.subtract_baseline_rc1_snip(**kwargs)
+spe_neon.write_cha(spe_neon_file,dataset = "/baseline")
 #spe_neon = spe_neon - spe_neon.moving_minimum(120)
 spe_neon = spe_neon.normalize()
 spe_neon.plot()
-spe_neon.write_cha(spe_neon_file,dataset = "/baseline")
+
+spe_neon.write_cha(spe_neon_file,dataset = "/normalized")
 assert min(spe_neon.x)>=0
 
 spe_sil_file = os.path.join(product["data"],"sil_{}.cha".format(laser_wl))
@@ -52,10 +54,11 @@ if os.path.exists(spe_sil_file):
 spe_sil.write_cha(spe_sil_file,"/raw")
 spe_sil = spe_sil.subtract_baseline_rc1_snip(**kwargs)
 #spe_sil = spe_sil - spe_sil.moving_minimum(120)
-spe_sil = spe_sil.normalize()
-spe_sil.plot()
 spe_sil.write_cha(spe_sil_file,dataset = "/baseline")
 assert min(spe_sil.x)>=0
+spe_sil = spe_sil.normalize()
+spe_sil.write_cha(spe_sil_file,dataset = "/normalized")
+spe_sil.plot()
 
 from ramanchada2.spectrum import from_chada
 spe = from_chada(spe_sil_file,dataset="/baseline")
