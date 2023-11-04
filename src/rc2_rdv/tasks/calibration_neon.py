@@ -128,9 +128,15 @@ def apply_calibration(laser_wl,spe, interp=None, offset=0,spe_units="cm-1",model
         else:
             return spe.shift_cm_1_to_abs_nm_filter(laser_wave_length_nm=laser_wl)      
 
+
+def peaks(spe_nCal_calib, prominence, profile='Gaussian',wlen=300, width=1):
+    cand = spe_nCal_calib.find_peak_multipeak(prominence=prominence, wlen=wlen, width=width)
+    init_guess = spe_nCal_calib.fit_peak_multimodel(profile=profile, candidates=cand, no_fit=True)
+    fit_res = spe_nCal_calib.fit_peak_multimodel(profile=profile, candidates=cand)
+    return cand, init_guess, fit_res
+
 def calibration_model(spe,ref,spe_units="cm-1",ref_units="nm",find_kw={},fit_peaks_kw={},should_fit = False):
     print("calibration_model laser_wl {} spe ({}) reference ({})".format(laser_wl,spe_units,ref_units))
-     
     #convert to ref_units
     spe_to_process = None #spe_to_process.__copy__()
     if ref_units == "nm":
@@ -139,27 +145,37 @@ def calibration_model(spe,ref,spe_units="cm-1",ref_units="nm",find_kw={},fit_pea
     else: #assume cm-1
         if spe_units != "cm-1":
             spe_to_process = spe.abs_nm_to_shift_cm_1_filter(laser_wave_length_nm=laser_wl)
-
     if spe_to_process is None:
        spe_to_process = spe.__copy__() 
-
     fig, ax = plt.subplots(3,1,figsize=(12,4))
     spe.plot(ax=ax[0].twinx(),label=spe_units)    
     spe_to_process.plot(ax=ax[1],label=ref_units)
     
+    #if should_fit:
+    #    spe_pos_dict = spe_to_process.fit_peak_positions(center_err_threshold=1, 
+    #                        find_peaks_kw=find_kw,  fit_peaks_kw=fit_peaks_kw)  # type: ignore   
+    #else:
+    #    find_kw = dict(sharpening=None)
+    #    spe_pos_dict = spe_to_process.find_peak_multipeak(**find_kw).get_pos_ampl_dict()  # type: ignore
+    #prominence=prominence, wlen=wlen, width=width
+    find_kw = dict(sharpening=None)
     if should_fit:
         spe_pos_dict = spe_to_process.fit_peak_positions(center_err_threshold=1, 
-                            find_peaks_kw=find_kw,  fit_peaks_kw=fit_peaks_kw)  # type: ignore   
+                            find_peaks_kw=find_kw,  fit_peaks_kw=fit_peaks_kw)  # type: ignore           
+        #fit_res = spe_to_process.fit_peak_multimodel(candidates=cand,**fit_peaks_kw)
+        #pos, amp = fit_res.center_amplitude(threshold=1)
+        #spe_pos_dict = dict(zip(pos, amp))        
     else:
-        find_kw = dict(sharpening=None)
-        spe_pos_dict = spe_to_process.find_peak_multipeak(**find_kw).get_pos_ampl_dict()  # type: ignore
+        #prominence=prominence, wlen=wlen, width=width
+        cand = spe_to_process.find_peak_multipeak(**find_kw)
+        spe_pos_dict = cand.get_pos_ampl_dict()        
 
     ax[2].stem(spe_pos_dict.keys(),spe_pos_dict.values(),linefmt='b-', basefmt=' ')
     ax[2].twinx().stem(ref.keys(),ref.values(),linefmt='r-', basefmt=' ')
    
     x_spe,x_reference,x_distance,df = match_peaks(spe_pos_dict,ref)
     sum_of_differences = np.sum(np.abs(x_spe - x_reference)) / len(x_spe)
-    print("sum_of_differences original ",sum_of_differences, ref_units)
+    print("sum_of_differences original {} {}".format(sum_of_differences, ref_units))
     if len(x_reference)==1:
         _offset = ( x_reference[0] - x_spe[0])
         print("ref",x_reference[0],"sample", x_spe[0],"offset", _offset, ref_units)
@@ -190,27 +206,35 @@ for _tag in ["neon","sil"]:
 
 
 spe_neon = spe["neon"]
-
-interp, model_units, df = calibration_model(spe_neon,ref=neon_wl[laser_wl],spe_units="cm-1",ref_units="nm",find_kw={},fit_peaks_kw={},should_fit = False)
+#Gaussian
+interp, model_units, df = calibration_model(spe_neon,ref=neon_wl[laser_wl],spe_units="cm-1",ref_units="nm",find_kw={},fit_peaks_kw={"profile":"Gaussian"},should_fit = False)
+df.to_csv(os.path.join(product["data"],"matched_peaks_"+spe_neon.meta["Original file"]+".csv"),index=False)
+df 
 
 spe_neon_calib = apply_calibration(laser_wl,spe_neon,interp,0,spe_units="cm-1",model_units=model_units)
 fig, ax = plt.subplots(1,1,figsize=(12,2))
 spe_neon.plot(ax=ax,label='original')
-spe_neon_calib.plot(ax=ax,color='r',label='calibrated')
+spe_neon_calib.plot(ax=ax,color='r',label='calibrated',fmt=':')
 
 
 spe_sil = spe["sil"]
 spe_sil_ne_calib = apply_calibration(laser_wl,spe_sil,interp,0,spe_units="cm-1",model_units=model_units)
+
+#"profile":"Pearson4" by D3.3, default is gaussian!
 offset_sil, model_units_sil, df_sil = calibration_model(spe_sil_ne_calib,ref={520.45:1},spe_units="cm-1",ref_units="cm-1",find_kw={},fit_peaks_kw={},should_fit=True)
+df_sil.to_csv(os.path.join(product["data"],"matched_peaks_"+spe_sil.meta["Original file"]+".csv"),index=False)
+df_sil
+
+
 spe_sil_calib = apply_calibration(laser_wl,spe_sil_ne_calib,None,offset_sil,spe_units="cm-1",model_units=model_units_sil)
 
 fig, ax =plt.subplots(2,1,figsize=(12,4))
-spe_sil.plot(label="sil original",ax=ax[0])
-spe_sil_ne_calib.plot(ax = ax[0],label="sil ne calibrated")
-spe_sil_calib.plot(ax = ax[0],label="sil calibrated")
+spe_sil.plot(ax=ax[0],label="sil original")
+spe_sil_ne_calib.plot(ax = ax[0],label="sil ne calibrated",fmt=":")
+spe_sil_calib.plot(ax = ax[0],label="sil calibrated",fmt=":")
 spe_sil.plot(label="sil original",ax=ax[1])
-spe_sil_ne_calib.plot(ax = ax[1],label="sil ne calibrated")
-spe_sil_calib.plot(ax = ax[1],label="sil calibrated")
+spe_sil_ne_calib.plot(ax = ax[1],label="sil ne calibrated",fmt=":")
+spe_sil_calib.plot(ax = ax[1],label="sil calibrated",fmt=":")
 ax[1].set_xlim(520.45-100,520.45+100)
 
 # apply
@@ -229,14 +253,9 @@ spe_calibrated_sil = apply_calibration(laser_wl,spe_calibrated_ne,None,offset_si
 
 fig, ax = plt.subplots(1,1,figsize=(12,2))
 spe_to_calibrate.plot(ax=ax,label = "original")
-spe_calibrated_ne.plot(ax=ax,label="Si calibrated")
-spe_calibrated_sil.plot(ax=ax,label="Ne+Si calibrated")
+spe_calibrated_ne.plot(ax=ax,label="Si calibrated",fmt=":")
+spe_calibrated_sil.plot(ax=ax,label="Ne+Si calibrated",fmt=":")
 
-def peaks(spe_nCal_calib, prominence, profile='Gaussian',wlen=300, width=1):
-    cand = spe_nCal_calib.find_peak_multipeak(prominence=prominence, wlen=wlen, width=width)
-    init_guess = spe_nCal_calib.fit_peak_multimodel(profile=profile, candidates=cand, no_fit=True)
-    fit_res = spe_nCal_calib.fit_peak_multimodel(profile=profile, candidates=cand)
-    return cand, init_guess, fit_res
 
 def plot_peaks_stem(ref_keys,ref_values,spe_keys,spe_values,spe=None, label="calibrated"):
     fig, ax = plt.subplots(figsize=(12, 2))
