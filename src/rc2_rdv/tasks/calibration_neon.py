@@ -3,11 +3,11 @@ upstream = ["calibration_load"]
 product = None
 laser_wl = None
 input_file = None
-prominence_coeff = 5
+prominence_coeff = 10   # > 10 according to CWA, ideally >100
 # -
 
 import os.path
-from ramanchada2.spectrum import from_chada,from_local_file, Spectrum
+from ramanchada2.spectrum import from_chada,from_local_file
 import ramanchada2.misc.constants  as rc2const
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
@@ -67,33 +67,34 @@ spe_neon = spe["neon"]
 #Gaussian
 
 
-model_neon = calmodel.create(spe_neon,neon_wl[laser_wl],spe_units="cm-1",ref_units="nm",find_kw={},fit_peaks_kw={},should_fit = False,name="Neon calibration")
+model_neon = calmodel.derive_model_x(spe_neon,neon_wl[laser_wl],spe_units="cm-1",ref_units="nm",find_kw={},fit_peaks_kw={},should_fit = False,name="Neon calibration")
 #interp, model_units, df = calibration_model_x(laser_wl,spe_neon,ref=neon_wl[laser_wl],spe_units="cm-1",ref_units="nm",find_kw={},fit_peaks_kw={"profile":"Gaussian"},should_fit = False)
 
 model_neon.peaks.to_csv(os.path.join(product["data"],"matched_peaks_"+spe_neon.meta["Original file"]+".csv"),index=False)
 model_neon.peaks 
 
 #spe_neon_calib = apply_calibration(laser_wl,spe_neon,interp,0,spe_units="cm-1",model_units=model_units)
-spe_neon_calib = calmodel.apply_calibration_x(spe_neon,spe_units="cm-1")
-fig, ax = plt.subplots(1,1,figsize=(12,2))
-spe_neon.plot(ax=ax,label='original')
-spe_neon_calib.plot(ax=ax,color='r',label='calibrated',fmt=':')
+spe_neon_calib = model_neon.process(spe_neon,spe_units="cm-1",convert_back=False)
+fig, ax = plt.subplots(2,1,figsize=(12,4))
+spe_neon.plot(ax=ax[0],label='original')
+spe_neon_calib.plot(ax=ax[1],color='r',label='calibrated',fmt=':')
 
 
 spe_sil = spe["sil"]
-#spe_sil_ne_calib = apply_calibration(laser_wl,spe_sil,interp,0,spe_units="cm-1",model_units=model_units)
-spe_sil_ne_calib = calmodel.apply_calibration_x(spe_sil,spe_units="cm-1")
+spe_sil_ne_calib = model_neon.process(spe_sil,spe_units="cm-1",convert_back=False)
+fig, ax = plt.subplots(2,1,figsize=(12,4))
+spe_sil.plot(ax=ax[0],label='original')
+spe_sil_ne_calib.plot(ax=ax[1],color='r',label='calibrated ',fmt=':')
 
 #"profile":"Pearson4" by D3.3, default is gaussian!
 #offset_sil, model_units_sil, df_sil = calibration_model_x(laser_wl,spe_sil_ne_calib,ref={520.45:1},spe_units="cm-1",ref_units="cm-1",find_kw={},fit_peaks_kw={},should_fit=True)
+find_kw = {"prominence" :spe_sil_ne_calib.y_noise * prominence_coeff , "wlen" : 200, "width" :  1 }
+model_si = calmodel.derive_model_shift(spe_sil_ne_calib,ref={520.45:1},spe_units="nm",ref_units="cm-1",find_kw=find_kw,fit_peaks_kw={},should_fit=True,name="Si calibration")
 
-model_si = calmodel.create(spe_sil_ne_calib,ref={520.45:1},spe_units="cm-1",ref_units="cm-1",find_kw={},fit_peaks_kw={},should_fit=True,name="Si calibration")
-model_si.peaks.to_csv(os.path.join(product["data"],"matched_peaks_"+spe_sil.meta["Original file"]+".csv"),index=False)
-model_si.peaks
+#model_si.peaks.to_csv(os.path.join(product["data"],"matched_peaks_"+spe_sil.meta["Original file"]+".csv"),index=False)
+#model_si.peaks
 
-
-#spe_sil_calib = apply_calibration(laser_wl,spe_sil_ne_calib,None,offset_sil,spe_units="cm-1",model_units=model_units_sil)
-spe_sil_calib = calmodel.apply_calibration_x(spe_sil_ne_calib,spe_units="cm-1")
+spe_sil_calib = model_si.process(spe_sil_ne_calib,spe_units="nm",convert_back=False)
 
 fig, ax =plt.subplots(2,1,figsize=(12,4))
 spe_sil.plot(ax=ax[0],label="sil original")
