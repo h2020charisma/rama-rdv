@@ -91,19 +91,18 @@ spe_sil_ne_calib.plot(ax=ax[1],color='r',label='calibrated ',fmt=':')
 find_kw = {"prominence" :spe_sil_ne_calib.y_noise * prominence_coeff , "wlen" : 200, "width" :  1 }
 model_si = calmodel.derive_model_shift(spe_sil_ne_calib,ref={520.45:1},spe_units="nm",ref_units="cm-1",find_kw=find_kw,fit_peaks_kw={},should_fit=True,name="Si calibration")
 
-#model_si.peaks.to_csv(os.path.join(product["data"],"matched_peaks_"+spe_sil.meta["Original file"]+".csv"),index=False)
-#model_si.peaks
+model_si.peaks.to_csv(os.path.join(product["data"],"matched_peaks_"+spe_sil.meta["Original file"]+".csv"),index=False)
+model_si.peaks
 
 spe_sil_calib = model_si.process(spe_sil_ne_calib,spe_units="nm",convert_back=False)
 
-fig, ax =plt.subplots(2,1,figsize=(12,4))
+fig, ax =plt.subplots(3,1,figsize=(12,4))
 spe_sil.plot(ax=ax[0],label="sil original")
-spe_sil_ne_calib.plot(ax = ax[0],label="sil ne calibrated",fmt=":")
-spe_sil_calib.plot(ax = ax[0],label="sil calibrated",fmt=":")
-spe_sil.plot(label="sil original",ax=ax[1])
 spe_sil_ne_calib.plot(ax = ax[1],label="sil ne calibrated",fmt=":")
-spe_sil_calib.plot(ax = ax[1],label="sil calibrated",fmt=":")
-ax[1].set_xlim(520.45-100,520.45+100)
+spe_sil_calib.plot(ax = ax[0],label="sil calibrated",fmt=":")
+spe_sil.plot(label="sil original",ax=ax[2])
+spe_sil_calib.plot(ax = ax[2],label="sil calibrated",fmt=":")
+ax[2].set_xlim(520.45-100,520.45+100)
 
 # apply
 
@@ -112,22 +111,18 @@ spe_to_calibrate.plot()
 if min(spe_to_calibrate.x)<0:
     spe_to_calibrate = spe_to_calibrate.trim_axes(method='x-axis',boundaries=(0,max(spe_to_calibrate.x)))     
 kwargs = {"niter" : 40 }
-#spe_to_calibrate = spe_to_calibrate.subtract_baseline_rc1_snip(**kwargs)
-spe_to_calibrate = spe_to_calibrate - spe_to_calibrate.moving_minimum(120)
+spe_to_calibrate = spe_to_calibrate.subtract_baseline_rc1_snip(**kwargs)
+#spe_to_calibrate = spe_to_calibrate - spe_to_calibrate.moving_minimum(120)
 #spe_to_calibrate = spe_to_calibrate.normalize()    
 spe_to_calibrate.plot(label="moving min")  
 
 
-#spe_calibrated_ne = apply_calibration(laser_wl,spe_to_calibrate,interp,0,spe_units="cm-1",model_units=model_units)
-spe_calibrated_ne = calmodel.apply_calibration_x(spe_to_calibrate,spe_units="cm-1")
-
-#spe_calibrated_sil = apply_calibration(laser_wl,spe_calibrated_ne,None,offset_sil,spe_units="cm-1",model_units=model_units_sil)
-spe_calibrated_sil = calmodel.apply_calibration_x(spe_calibrated_ne,spe_units="cm-1")
+spe_calibrated_ne_sil = calmodel.apply_calibration_x(spe_to_calibrate,spe_units="cm-1")
 
 fig, ax = plt.subplots(1,1,figsize=(12,2))
 spe_to_calibrate.plot(ax=ax,label = "original")
-spe_calibrated_ne.plot(ax=ax,label="Si calibrated",fmt=":")
-spe_calibrated_sil.plot(ax=ax,label="Ne+Si calibrated",fmt=":")
+#spe_calibrated_ne.plot(ax=ax,label="Si calibrated",fmt=":")
+spe_calibrated_ne_sil.plot(ax=ax,label="Ne+Si calibrated",fmt=":")
 
 
 def plot_peaks_stem(ref_keys,ref_values,spe_keys,spe_values,spe=None, label="calibrated"):
@@ -151,11 +146,11 @@ profile = "Voigt"
 wlen = 50
 width = 3
 
-cand, init_guess, fit_res = peaks(spe_calibrated_sil,prominence = spe_calibrated_sil.y_noise*prominence_coeff,profile=profile,wlen=wlen,width=width)
+cand, init_guess, fit_res = peaks(spe_calibrated_ne_sil,prominence = spe_calibrated_ne_sil.y_noise*prominence_coeff,profile=profile,wlen=wlen,width=width)
 fig, ax = plt.subplots(3,1,figsize=(12, 4))
 data_list = [cand, init_guess, fit_res]
 for data, subplot in zip(data_list, ax):
-    spe_calibrated_sil.plot(ax=subplot, fmt=':')
+    spe_calibrated_ne_sil.plot(ax=subplot, fmt=':')
     data.plot(ax=subplot)
 
 #original spectrum to be calibrated
@@ -163,7 +158,7 @@ cand_0, init_guess_0, fit_res_0 = peaks(spe_to_calibrate,prominence = spe_to_cal
 fig, ax = plt.subplots(3,1,figsize=(12, 4))
 data_list = [cand_0, init_guess_0, fit_res_0 ]
 for data, subplot in zip(data_list, ax):
-    spe_calibrated_sil.plot(ax=subplot, fmt=':')
+    spe_calibrated_ne_sil.plot(ax=subplot, fmt=':')
     data.plot(ax=subplot)
 
 df_peaks = fit_res.to_dataframe_peaks()
@@ -172,7 +167,7 @@ df_peaks[['group', 'peak']] = df_peaks.index.to_series().str.split('_', expand=T
 df_peaks["param_profile"] = profile
 df_peaks["param_wlen"] = wlen
 df_peaks["param_width"] = width
-df_peaks["param_prominence"] = spe_calibrated_sil.y_noise*prominence_coeff
+df_peaks["param_prominence"] = spe_calibrated_ne_sil.y_noise*prominence_coeff
 df_peaks.to_csv(os.path.join(product["data"],spe_to_calibrate.meta["Original file"]+".csv"))
 
 from ramanchada2.misc import utils as rc2utils
@@ -180,7 +175,7 @@ from ramanchada2.misc import utils as rc2utils
 sample = "PST"
 if sample=="PST":
     pst = rc2const.PST_RS_dict
-    plot_peaks_stem(pst.keys(), pst.values(),df_peaks["center"], df_peaks["height"] , spe_calibrated_sil ,label="calibrated")      
+    plot_peaks_stem(pst.keys(), pst.values(),df_peaks["center"], df_peaks["height"] , spe_calibrated_ne_sil ,label="calibrated")      
     plot_peaks_stem(pst.keys(), pst.values(),df_peaks["center"], df_peaks["height"] , spe_to_calibrate , label="original")        
 
     x_sample,x_reference,x_distance,df = rc2utils.match_peaks(cand_0.get_pos_ampl_dict(),pst)
