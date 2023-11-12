@@ -91,7 +91,7 @@ spe_sil_ne_calib.plot(ax=ax[1],color='r',label='calibrated ',fmt=':')
 find_kw = {"prominence" :spe_sil_ne_calib.y_noise * prominence_coeff , "wlen" : 200, "width" :  1 }
 model_si = calmodel.derive_model_shift(spe_sil_ne_calib,ref={520.45:1},spe_units="nm",ref_units="cm-1",find_kw=find_kw,fit_peaks_kw={},should_fit=True,name="Si calibration")
 
-model_si.peaks.to_csv(os.path.join(product["data"],"matched_peaks_"+spe_sil.meta["Original file"]+".csv"),index=False)
+model_si.peaks.to_csv(os.path.join(product["data"],"peaks_"+spe_sil.meta["Original file"]+".csv"),index=False)
 model_si.peaks
 
 spe_sil_calib = model_si.process(spe_sil_ne_calib,spe_units="nm",convert_back=False)
@@ -143,7 +143,7 @@ def plot_peaks_stem(ref_keys,ref_values,spe_keys,spe_values,spe=None, label="cal
     plt.show()
 
 profile = "Voigt"
-wlen = 50
+wlen = 100
 width = 3
 
 cand, init_guess, fit_res = peaks(spe_calibrated_ne_sil,prominence = spe_calibrated_ne_sil.y_noise*prominence_coeff,profile=profile,wlen=wlen,width=width)
