@@ -18,7 +18,7 @@ from  pynanomapper.datamodel.nexus_spectra import spe2ambit
 from  pynanomapper.datamodel.ambit import Substances,SubstanceRecord,CompositionEntry,Component, Compound
 import nexusformat.nexus.tree as nx
 
-def calmodel2nexus(calmodel, nexus_file_path):
+def calmodel2nexus(calmodel, spectra, tags, nexus_file_path):
     substances = []
     for model in calmodel.components:
         spe = model.spe
@@ -28,10 +28,19 @@ def calmodel2nexus(calmodel, nexus_file_path):
                             instrument = "instrument",
                             wavelength=calmodel.laser_wl,
                             provider="provider",
-                            investigation="calibration",
+                            investigation="calibration source",
                             sample=model.sample,
                             sample_provider = "sample_provider",
-                            prefix = "TEST")                       
+                            prefix = "MODEL",unit=model.spe_units)                  
+        spe_new = calmodel.apply_calibration_x(spe,model.spe_units)     
+        spe2ambit(spe_new.x,spe_new.y,spe_new.meta,
+                            instrument = "instrument",
+                            wavelength=calmodel.laser_wl,
+                            provider="provider",
+                            investigation="calibration source",
+                            sample=model.sample,
+                            sample_provider = "sample_provider",
+                            prefix = "MODEL",unit=model.spe_units,endpointtype="CALIBRATED",papp=papp)                          
         substance = SubstanceRecord(name=model.sample,i5uuid=papp.owner.substance.uuid)
         substance.composition = list()
         composition_entry = CompositionEntry(component = Component(compound = Compound(name=model.sample),values={}))
@@ -43,14 +52,61 @@ def calmodel2nexus(calmodel, nexus_file_path):
         
         substances.append(substance)
         #study = mx.Study(study=studies)
+
+    papp = None
+    for spe, label in zip(spectra, tags):
+        sample="PST"
+        spe.plot()
+        papp = spe2ambit(spe.x,spe.y,spe.meta,
+                            instrument = "instrument",
+                            wavelength=calmodel.laser_wl,
+                            provider="provider",
+                            investigation="calibrated spectra",
+                            sample=sample,
+                            sample_provider = "sample_provider",
+                            prefix = "APPLY",unit="cm-1",endpointtype=label,papp=papp)
+             
+    spe_new = calmodel.apply_calibration_x(spectra[-1],"cm-1")
+    spe_new.plot()
+    papp = spe2ambit(spe_new.x,spe_new.y,spe_new.meta,
+                            instrument = "instrument",
+                            wavelength=calmodel.laser_wl,
+                            provider="provider",
+                            investigation="calibrated spectra",
+                            sample=sample,
+                            sample_provider = "sample_provider",
+                            prefix = "APPLY",unit="cm-1",endpointtype="CALIBRATED",papp=papp)     
+    substance = SubstanceRecord(name=sample,i5uuid=papp.owner.substance.uuid)
+    substance.composition = list()
+    composition_entry = CompositionEntry(component = Component(compound = Compound(name=sample),values={}))
+    substance.composition.append(composition_entry)
+    if substance.study is None:
+        substance.study = [papp]
+    else:
+        substance.study.add(papp)
+    substances.append(substance)
+
     nxroot = Substances(substance=substances).to_nexus(nx.NXroot())
     nxroot.save(nexus_file_path,mode="w")
 
-calmodel = CalibrationModel.from_file(calibration_file)
-calmodel2nexus(calmodel,product["nexus"])
-
-
 spe_to_calibrate = from_local_file(input_file)
+
+
+spe_to_calibrate.plot()
+if min(spe_to_calibrate.x)<40:
+    spe_trimmed = spe_to_calibrate.trim_axes(method='x-axis',boundaries=(0,max(spe_to_calibrate.x)))    
+else:
+    spe_trimmed = spe_to_calibrate 
+kwargs = {"niter" : 40 }
+spe_baseline_removed = spe_trimmed.subtract_baseline_rc1_snip(**kwargs)
+#spe_to_calibrate = spe_to_calibrate - spe_to_calibrate.moving_minimum(120)
+#spe_to_calibrate = spe_to_calibrate.normalize()    
+spe_baseline_removed.plot(label="snip")  
+
+calmodel = CalibrationModel.from_file(calibration_file)
+calmodel2nexus(calmodel,[spe_to_calibrate,spe_trimmed,spe_baseline_removed],["RAW_DATA","1.TRIMMED","2.BASELINE_REMOVED"],product["nexus"])
+
+spe_to_calibrate = spe_baseline_removed
 spe_to_calibrate.plot()
 if min(spe_to_calibrate.x)<0:
     spe_to_calibrate = spe_to_calibrate.trim_axes(method='x-axis',boundaries=(0,max(spe_to_calibrate.x)))     
@@ -59,8 +115,6 @@ spe_to_calibrate = spe_to_calibrate.subtract_baseline_rc1_snip(**kwargs)
 #spe_to_calibrate = spe_to_calibrate - spe_to_calibrate.moving_minimum(120)
 #spe_to_calibrate = spe_to_calibrate.normalize()    
 spe_to_calibrate.plot(label="moving min")  
-
-
 spe_calibrated_ne_sil = calmodel.apply_calibration_x(spe_to_calibrate,spe_units="cm-1")
 
 fig, ax = plt.subplots(1,1,figsize=(12,2))
