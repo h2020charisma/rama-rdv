@@ -31,7 +31,17 @@ tasks:
     product: 
       nb: "{{output_folder}}/calibration/calibration_neon.ipynb"
       data:  "{{calibrated_files}}"
+      model: "{{output_folder}}/{{calibration_file}}"
     params:
       laser_wl: "{{laser_wl4calibration}}"
       input_file: "{{input_file}}"
       prominence_coeff: "{{prominence_coeff}}"
+
+  - source: tasks/calibration_nexus.py
+    product: 
+      nb: "{{output_folder}}/calibration/calibration_nexus.ipynb"
+ 
+    params:
+      input_file: "{{input_file}}"
+      calibration_file: "{{output_folder}}/{{calibration_file}}"
+  
