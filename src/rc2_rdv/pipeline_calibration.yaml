@@ -40,7 +40,7 @@ tasks:
   - source: tasks/calibration_nexus.py
     product: 
       nb: "{{output_folder}}/calibration/calibration_nexus.ipynb"
- 
+      nexus: "{{output_folder}}/calibration/carlibration.nxs"
     params:
       input_file: "{{input_file}}"
       calibration_file: "{{output_folder}}/{{calibration_file}}"

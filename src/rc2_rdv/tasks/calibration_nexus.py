@@ -13,8 +13,41 @@ from matplotlib.lines import Line2D
 from pathlib import Path
 from ramanchada2.protocols.calibration import CalibrationModel
 import numpy as np
+from  pynanomapper.datamodel.nexus_writer import to_nexus
+from  pynanomapper.datamodel.nexus_spectra import spe2ambit
+from  pynanomapper.datamodel.ambit import Substances,SubstanceRecord,CompositionEntry,Component, Compound
+import nexusformat.nexus.tree as nx
+
+def calmodel2nexus(calmodel, nexus_file_path):
+    substances = []
+    for model in calmodel.components:
+        spe = model.spe
+        print(model)
+        print(model.sample)
+        papp = spe2ambit(spe.x,spe.y,spe.meta,
+                            instrument = "instrument",
+                            wavelength=calmodel.laser_wl,
+                            provider="provider",
+                            investigation="calibration",
+                            sample=model.sample,
+                            sample_provider = "sample_provider",
+                            prefix = "TEST")                       
+        substance = SubstanceRecord(name=model.sample,i5uuid=papp.owner.substance.uuid)
+        substance.composition = list()
+        composition_entry = CompositionEntry(component = Component(compound = Compound(name=model.sample),values={}))
+        substance.composition.append(composition_entry)
+        if substance.study is None:
+            substance.study = [papp]
+        else:
+            substance.study.add(papp)
+        
+        substances.append(substance)
+        #study = mx.Study(study=studies)
+    nxroot = Substances(substance=substances).to_nexus(nx.NXroot())
+    nxroot.save(nexus_file_path,mode="w")
 
 calmodel = CalibrationModel.from_file(calibration_file)
+calmodel2nexus(calmodel,product["nexus"])
 
 
 spe_to_calibrate = from_local_file(input_file)
@@ -89,10 +122,12 @@ if sample=="PST":
     plot_peaks_stem(pst.keys(), pst.values(),df_peaks["center"], df_peaks["height"] , spe_to_calibrate , label="original")        
 
     x_sample,x_reference,x_distance,df = rc2utils.match_peaks(cand_0.get_pos_ampl_dict(),pst)
+    print(x_sample,x_reference)
     sum_of_distances = np.sum(x_distance) / len(x_sample)
     sum_of_differences = np.sum(np.abs(x_sample - x_reference)) / len(x_sample)
     print("original sum of diff",sum_of_differences,"original sum of distances",sum_of_distances,len(x_sample),list(zip(x_sample,x_reference)))    
     x_sample,x_reference,x_distance,df = rc2utils.match_peaks(cand.get_pos_ampl_dict(),pst)
+    print(x_sample,x_reference)
     sum_of_differences = np.sum(np.abs(x_sample - x_reference)) / len(x_sample)
     sum_of_distances = np.sum(x_distance) / len(x_sample)
     print("calibrated sum of diff",sum_of_differences,"calibrated sum of distances",sum_of_distances,len(x_sample),list(zip(x_sample,x_reference)))
