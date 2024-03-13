@@ -1,0 +1,20 @@
+
+# this pipeline is obsolete and can be removed.  
+tasks:
+  # was initial implementation, which is now split into calibration_neon and calibration_load
+  - source: tasks/calibration.py
+    product: 
+      nb: "{{output_folder}}/calibration/calibration.ipynb"
+      data: "{{output_folder}}/calibration/calibration_{{laser_wl4calibration}}.cha"
+    params:
+      laser_wl: "{{laser_wl4calibration}}"
+
+  - source: tasks/calibration_apply.py
+    product: 
+      nb: "{{output_folder}}/calibration/calibration_apply.ipynb"
+      data: "{{output_folder}}/calibration/results"
+    params:
+      laser_wl: "{{laser_wl4calibration}}"
+      test_only: False
+      input_file: "{{input_file}}"
+      sample: "PST"

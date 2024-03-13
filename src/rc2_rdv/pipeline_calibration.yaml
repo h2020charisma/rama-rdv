@@ -1,12 +1,8 @@
 
 tasks:
-  - source: tasks/calibration.py
-    product: 
-      nb: "{{output_folder}}/calibration/calibration.ipynb"
-      data: "{{output_folder}}/calibration/calibration_{{laser_wl4calibration}}.cha"
-    params:
-      laser_wl: "{{laser_wl4calibration}}"
-
+  # loads Ne and Si spectra in native formats 
+  # performs baseline removal and normalisation
+  # stores the normalized spectra as .cha files 
   - source: tasks/calibration_load.py
     product: 
       nb: "{{output_folder}}/calibration/calibration_load.ipynb"
@@ -16,17 +12,12 @@ tasks:
       test_only: False    
       neon_file: "{{neon_file}}"
       silicon_file: "{{silicon_file}}"
-
-  - source: tasks/calibration_apply.py
-    product: 
-      nb: "{{output_folder}}/calibration/calibration_apply.ipynb"
-      data: "{{output_folder}}/calibration/results"
-    params:
-      laser_wl: "{{laser_wl4calibration}}"
-      test_only: False
-      input_file: "{{input_file}}"
-      sample: "PST"
-
+  
+  # loads the Ne and Si from .cha files 
+  # performs x-calibration according to D3.3
+  # stores the calibration model (pickle at the moment)
+  # uses CalibrationModel from rc2 (nexusformat branch)
+  # input_file param should be removed, not used
   - source: tasks/calibration_neon.py
     product: 
       nb: "{{output_folder}}/calibration/calibration_neon.ipynb"
@@ -37,6 +28,10 @@ tasks:
       input_file: "{{input_file}}"
       prominence_coeff: "{{prominence_coeff}}"
 
+  # Loads the calibration model saved from calibration_neon task
+  # applies to input_file (tbd - modify to apply to set of files)
+  # the idea is to apply the model to all spectra taken with the same instrument
+  # ploomber is nice here, as the model derivation will be executed only once
   - source: tasks/calibration_nexus.py
     product: 
       nb: "{{output_folder}}/calibration/calibration_nexus.ipynb"
