@@ -17,7 +17,6 @@ tasks:
   # performs x-calibration according to D3.3
   # stores the calibration model (pickle at the moment)
   # uses CalibrationModel from rc2 (nexusformat branch)
-  # input_file param should be removed, not used
   - source: tasks/calibration_neon.py
     product: 
       nb: "{{output_folder}}/calibration/calibration_neon.ipynb"
@@ -25,7 +24,6 @@ tasks:
       model: "{{calibrated_files}}/{{calibration_file}}"
     params:
       laser_wl: "{{laser_wl4calibration}}"
-      input_file: "{{input_file}}"
       prominence_coeff: "{{prominence_coeff}}"
 
   # Loads the calibration model saved from calibration_neon task
@@ -35,7 +33,8 @@ tasks:
   - source: tasks/calibration_nexus.py
     product: 
       nb: "{{output_folder}}/calibration/calibration_nexus.ipynb"
-      nexus: "{{calibrated_files}}/results/calibration_results.nxs"
+      nexus: "{{calibrated_files}}/results/"
     params:
-      input_file: "{{input_file}}"
+      input_folder: "{{input_folder}}"
+      input_files: "{{input_files}}"
   

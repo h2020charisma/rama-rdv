@@ -22,11 +22,11 @@ else:
     spe_neon = rc2.spectrum.from_local_file(neon_file)
     if min(spe_neon.x)<0:
         spe_neon = spe_neon.trim_axes(method='x-axis',boundaries=(trim_left,max(spe_neon.x)))
-    spe_neon.plot()
+    spe_neon.plot(label=os.path.basename(neon_file))
     spe_sil = rc2.spectrum.from_local_file(silicon_file)    
     if min(spe_sil.x)<0:
         spe_sil = spe_sil.trim_axes(method='x-axis',boundaries=(trim_left,max(spe_sil.x)))      
-    spe_sil.plot()
+    spe_sil.plot(label=os.path.basename(silicon_file))
 
 
 print("Silicon len={} [{},{}]".format(len(spe_sil.x),min(spe_sil.x),max(spe_sil.x)))
