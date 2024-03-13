@@ -134,12 +134,11 @@ for input_file in input_files.split(","):
     spe_calibrated_ne_sil.plot(ax =ax, label="Ne+Si calibrated",fmt=":")
     ax.set_title(input_file)
     plt.show()
-    spe_to_calibrate.write_cha(
-        os.path.join(product["nexus"],"{}.cha".format(input_file))
-        ,dataset = "/raw")
-    spe_calibrated_ne_sil.write_cha(
-        os.path.join(product["nexus"],"{}.cha".format(input_file))
-        ,dataset = "/calibrated")    
+    cha_file = os.path.join(product["nexus"],"{}.cha".format(input_file))
+    if os.path.exists(cha_file):
+        os.remove(cha_file)
+    spe_to_calibrate.write_cha(cha_file,dataset = "/raw")
+    spe_calibrated_ne_sil.write_cha(cha_file,dataset = "/calibrated")    
     calmodel2nexus(calmodel,
                    [spe_to_calibrate,spe_trimmed,spe_baseline_removed,spe_calibrated_ne_sil],
                    ["RAW_DATA","1.TRIMMED","2.BASELINE_REMOVED","CALIBRATED"],

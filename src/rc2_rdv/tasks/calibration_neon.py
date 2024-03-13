@@ -7,7 +7,7 @@ prominence_coeff = 10   # > 10 according to CWA, ideally >100
 # -
 
 import os.path
-from ramanchada2.spectrum import from_chada,from_local_file
+from ramanchada2.spectrum import from_chada
 import ramanchada2.misc.constants  as rc2const
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
