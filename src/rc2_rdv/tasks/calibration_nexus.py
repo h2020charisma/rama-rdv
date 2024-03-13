@@ -7,9 +7,7 @@ input_files = None
 
 import os.path
 from ramanchada2.spectrum import from_chada,from_local_file
-import ramanchada2.misc.constants  as rc2const
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
 from pathlib import Path
 from ramanchada2.protocols.calibration import CalibrationModel
 import numpy as np
