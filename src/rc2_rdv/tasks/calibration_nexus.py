@@ -1,7 +1,6 @@
 # + tags=["parameters"]
 upstream = ["calibration_neon"]
 product = None
-calibration_file = None
 input_file = None
 # -
 
@@ -103,6 +102,8 @@ spe_baseline_removed = spe_trimmed.subtract_baseline_rc1_snip(**kwargs)
 #spe_to_calibrate = spe_to_calibrate.normalize()    
 spe_baseline_removed.plot(label="snip")  
 
+calibration_file = upstream["calibration_neon"]["model"]
+print(calibration_file)
 calmodel = CalibrationModel.from_file(calibration_file)
 calmodel2nexus(calmodel,[spe_to_calibrate,spe_trimmed,spe_baseline_removed],["RAW_DATA","1.TRIMMED","2.BASELINE_REMOVED"],product["nexus"])
 
