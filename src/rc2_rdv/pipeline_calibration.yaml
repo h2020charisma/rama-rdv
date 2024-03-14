@@ -5,8 +5,8 @@ tasks:
   # stores the normalized spectra as .cha files 
   - source: tasks/calibration_load.py
     product: 
-      nb: "{{output_folder}}/calibration/calibration_load.ipynb"
-      data: "{{calibrated_files}}/source"
+      nb: "{{results_folder}}/{{tag}}/notebooks/calibration_load.ipynb"
+      data: "{{results_folder}}/{{tag}}/source"
     params:
       laser_wl: "{{laser_wl4calibration}}"
       test_only: False    
@@ -19,9 +19,9 @@ tasks:
   # uses CalibrationModel from rc2 (nexusformat branch)
   - source: tasks/calibration_neon.py
     product: 
-      nb: "{{output_folder}}/calibration/calibration_neon.ipynb"
-      data:  "{{calibrated_files}}"
-      model: "{{calibrated_files}}/{{calibration_file}}"
+      nb: "{{results_folder}}/{{tag}}/notebooks/calibration_neon.ipynb"
+      data:  "{{results_folder}}/{{tag}}/log"
+      model: "{{results_folder}}/{{tag}}/{{calibration_file}}"
     params:
       laser_wl: "{{laser_wl4calibration}}"
       prominence_coeff: "{{prominence_coeff}}"
@@ -32,15 +32,15 @@ tasks:
   # ploomber is nice here, as the model derivation will be executed only once
   - source: tasks/calibration_nexus.py
     product: 
-      nb: "{{output_folder}}/calibration/calibration_nexus.ipynb"
-      nexus: "{{calibrated_files}}/results/"
+      nb: "{{results_folder}}/{{tag}}/notebooks/calibration_nexus.ipynb"
+      nexus: "{{results_folder}}/{{tag}}/results/"
     params:
       input_folder: "{{input_folder}}"
       input_files: "{{input_files}}"
   
   - source: tasks/calibration_assessment.py
     product: 
-      nb: "{{output_folder}}/calibration/calibration_assessment.ipynb"
+      nb: "{{results_folder}}/{{tag}}/notebooks/calibration_assessment.ipynb"
     params:
       input_files: "{{input_files}}"
-      model: "{{calibrated_files}}/{{calibration_file}}"
+      model: "{{results_folder}}/{{tag}}/{{calibration_file}}"

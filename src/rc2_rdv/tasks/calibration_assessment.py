@@ -5,6 +5,8 @@ input_files = None
 model = None
 # -
 
+# evaluation with polystyrene 
+
 import os.path
 from ramanchada2.spectrum import from_chada
 import matplotlib.pyplot as plt
