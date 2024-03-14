@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from pathlib import Path
 from ramanchada2.protocols.calibration import CalibrationModel
-
+import ramanchada2.misc.utils as rc2utils
 
 Path(product["data"]).mkdir(parents=True, exist_ok=True)
 
@@ -81,16 +81,7 @@ fig, ax = plt.subplots(2,1,figsize=(12,4))
 spe_neon.plot(ax=ax[0],label='original')
 spe_neon_calib.plot(ax=ax[1],color='r',label='calibrated',fmt=':')
 
-#check what we have done
-import ramanchada2.misc.utils as rc2utils
-find_kw = dict(sharpening=None)
-spe_pos_dict = spe_neon_calib.fit_peak_positions(center_err_threshold=10, 
-                                find_peaks_kw=find_kw,  fit_peaks_kw={})  # type: ignore 
-x_spe,x_reference,x_distance,df = rc2utils.match_peaks(spe_pos_dict, model_neon.ref)
-sum_of_differences = np.sum(np.abs(x_spe - x_reference)) / len(x_spe)
-print("sum_of_differences calibrated {} {}".format(sum_of_differences, model_neon.ref_units))
-print(list(zip(x_spe,x_reference)))
-
+#now lazer zeroing
 
 spe_sil = spe["sil"]
 spe_sil_ne_calib = model_neon.process(spe_sil,spe_units="cm-1",convert_back=False)
@@ -119,6 +110,15 @@ spe_sil.plot(label="sil original",ax=ax[2])
 spe_sil_calib.plot(ax = ax[2],label="sil zeroed",fmt=":")
 ax[2].set_xlim(520.45-50,520.45+50)
 
+#check what we have done
+find_kw = dict(sharpening=None)
+for spe in [spe_sil,spe_sil_calib]:
+    spe_pos_dict = spe.fit_peak_positions(center_err_threshold=10, 
+                                find_peaks_kw=find_kw,  fit_peaks_kw={})  # type: ignore 
+    x_spe,x_reference,x_distance,df = rc2utils.match_peaks(spe_pos_dict, model_si.ref)
+    sum_of_differences = np.sum(np.abs(x_spe - x_reference)) / len(x_spe)
+    print("sum_of_differences {} {}".format(sum_of_differences, model_si.ref_units))
+    print(list(zip(x_spe,x_reference)))
 
 # calmodel save
 
