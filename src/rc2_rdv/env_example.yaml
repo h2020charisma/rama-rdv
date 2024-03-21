@@ -24,4 +24,4 @@ input_files: "NMIJ RM8158a 785_x20_10%_01.txt"
 calibration_file: "calibration.pkl"
 tag: "subfolder_rename_it"
 
-
+test_only: True
