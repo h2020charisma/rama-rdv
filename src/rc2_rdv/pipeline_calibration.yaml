@@ -1,5 +1,6 @@
 
 tasks:
+
   # loads Ne and Si spectra in native formats 
   # performs baseline removal and normalisation
   # stores the normalized spectra as .cha files 
@@ -9,7 +10,7 @@ tasks:
       data: "{{results_folder}}/{{tag}}/source"
     params:
       laser_wl: "{{laser_wl4calibration}}"
-      test_only: False    
+      test_only: "{{test_only}}"   
       neon_file: "{{neon_file}}"
       silicon_file: "{{silicon_file}}"
   
@@ -37,6 +38,8 @@ tasks:
     params:
       input_folder: "{{input_folder}}"
       input_files: "{{input_files}}"
+      test_only: "{{test_only}}"
+      laser_wl: "{{laser_wl4calibration}}" 
   
   - source: tasks/calibration_assessment.py
     product: 

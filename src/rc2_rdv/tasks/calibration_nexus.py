@@ -3,10 +3,12 @@ upstream = ["calibration_neon"]
 product = None
 input_folder = None
 input_files = None
+test_only = None
+laser_wl = None
 # -
 
 import os.path
-from ramanchada2.spectrum import from_chada,from_local_file
+from ramanchada2.spectrum import from_chada,from_local_file,from_test_spe
 import matplotlib.pyplot as plt
 from pathlib import Path
 from ramanchada2.protocols.calibration import CalibrationModel
@@ -15,6 +17,7 @@ from  pynanomapper.datamodel.nexus_writer import to_nexus
 from  pynanomapper.datamodel.nexus_spectra import spe2ambit
 from  pynanomapper.datamodel.ambit import Substances,SubstanceRecord,CompositionEntry,Component, Compound
 import nexusformat.nexus.tree as nx
+
 
 def calmodel2nexus(calmodel, spectra, tags, nexus_file_path):
     substances = []
@@ -103,6 +106,40 @@ def calmodel2nexus(calmodel, spectra, tags, nexus_file_path):
     print(nexus_file_path)
     nxroot.save(nexus_file_path,mode="w")
 
+
+def calibrate(spe_target):
+    fig, ax = plt.subplots(1,1,figsize=(12,4))
+    for spe_to_calibrate in spe_target:
+        input_file = spe_to_calibrate.meta["Original file"]
+        spe_to_calibrate.plot(label="original",ax=ax)
+        if min(spe_to_calibrate.x)<40:
+            spe_trimmed = spe_to_calibrate.trim_axes(method='x-axis',boundaries=(0,max(spe_to_calibrate.x)))    
+            spe_trimmed.plot(label="trimmed",ax=ax)
+        else:
+            spe_trimmed = spe_to_calibrate 
+        kwargs = {"niter" : 40 }
+        spe_baseline_removed = spe_trimmed.subtract_baseline_rc1_snip(**kwargs)
+        #spe_to_calibrate = spe_to_calibrate - spe_to_calibrate.moving_minimum(120)
+        #spe_to_calibrate = spe_to_calibrate.normalize()    
+        spe_baseline_removed.plot(label="baseline_snip",ax=ax)  
+        spe_to_calibrate = spe_baseline_removed
+        spe_calibrated_ne_sil = calmodel.apply_calibration_x(spe_to_calibrate,spe_units="cm-1")
+        #spe_to_calibrate.plot(ax=ax,label = "original")
+        spe_calibrated_ne_sil.plot(ax =ax, label="Ne+Si calibrated",fmt=":")
+        ax.set_title(input_file)
+        plt.show()
+        cha_file = os.path.join(product["nexus"],"{}.cha".format(input_file))
+        if os.path.exists(cha_file):
+            os.remove(cha_file)
+        spe_to_calibrate.write_cha(cha_file,dataset = "/raw")
+        spe_calibrated_ne_sil.write_cha(cha_file,dataset = "/calibrated")    
+        calmodel2nexus(calmodel,
+                    [spe_to_calibrate,spe_trimmed,spe_baseline_removed,spe_calibrated_ne_sil],
+                    ["RAW_DATA","1.TRIMMED","2.BASELINE_REMOVED","CALIBRATED"],
+                    os.path.join(product["nexus"],"{}-calibrated.nxs".format(os.path.basename(input_file))),
+                    )
+
+
 Path(product["nexus"]).mkdir(parents=True, exist_ok=True)
 # load calibration model
 calibration_file = upstream["calibration_neon"]["model"]
@@ -111,35 +148,14 @@ calmodel = CalibrationModel.from_file(calibration_file)
 #calmodel2nexus(calmodel,[spe_to_calibrate,spe_trimmed,spe_baseline_removed],["RAW_DATA","1.TRIMMED","2.BASELINE_REMOVED"],product["nexus"])
 
 # load the spectra to be calibrated
-fig, ax = plt.subplots(1,1,figsize=(12,4))
-for input_file in input_files.split(","):
-    print(os.path.join(input_folder,input_file))
-    spe_to_calibrate = from_local_file(os.path.join(input_folder,input_file))
-    spe_to_calibrate.plot(label="original",ax=ax)
-    if min(spe_to_calibrate.x)<40:
-        spe_trimmed = spe_to_calibrate.trim_axes(method='x-axis',boundaries=(0,max(spe_to_calibrate.x)))    
-        spe_trimmed.plot(label="trimmed",ax=ax)
-    else:
-        spe_trimmed = spe_to_calibrate 
-    kwargs = {"niter" : 40 }
-    spe_baseline_removed = spe_trimmed.subtract_baseline_rc1_snip(**kwargs)
-    #spe_to_calibrate = spe_to_calibrate - spe_to_calibrate.moving_minimum(120)
-    #spe_to_calibrate = spe_to_calibrate.normalize()    
-    spe_baseline_removed.plot(label="baseline_snip",ax=ax)  
-    spe_to_calibrate = spe_baseline_removed
-    spe_calibrated_ne_sil = calmodel.apply_calibration_x(spe_to_calibrate,spe_units="cm-1")
-    #spe_to_calibrate.plot(ax=ax,label = "original")
-    spe_calibrated_ne_sil.plot(ax =ax, label="Ne+Si calibrated",fmt=":")
-    ax.set_title(input_file)
-    plt.show()
-    cha_file = os.path.join(product["nexus"],"{}.cha".format(input_file))
-    if os.path.exists(cha_file):
-        os.remove(cha_file)
-    spe_to_calibrate.write_cha(cha_file,dataset = "/raw")
-    spe_calibrated_ne_sil.write_cha(cha_file,dataset = "/calibrated")    
-    calmodel2nexus(calmodel,
-                   [spe_to_calibrate,spe_trimmed,spe_baseline_removed,spe_calibrated_ne_sil],
-                   ["RAW_DATA","1.TRIMMED","2.BASELINE_REMOVED","CALIBRATED"],
-                   os.path.join(product["nexus"],"{}-calibrated.nxs".format(os.path.basename(spe_to_calibrate.meta["Original file"]))),
-                   )
+spe_target = []
+if test_only:
+    spe_pst = from_test_spe(sample=['PST'], provider=['FNMT'], OP=['03'], laser_wl=[str(laser_wl)])
+    spe_target.append(spe_pst)
+else:
+    for input_file in input_files.split(","):
+        print(os.path.join(input_folder,input_file))
+        spe_to_calibrate = from_local_file(os.path.join(input_folder,input_file))
+        spe_target.append(spe_to_calibrate)
 
+calibrate(spe_target)

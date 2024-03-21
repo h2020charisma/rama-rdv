@@ -61,28 +61,37 @@ for input_file in input_files.split(","):
     for data, subplot in zip(data_list, ax):
         spe_raw.plot(ax=subplot, fmt=':')
         data.plot(ax=subplot)
-    df_peaks = fit_res.to_dataframe_peaks()
-    df_peaks["Original file"] = spe_raw.meta["Original file"]
-    df_peaks[['group', 'peak']] = df_peaks.index.to_series().str.split('_', expand=True)
-    df_peaks["param_profile"] = profile
-    df_peaks["param_wlen"] = wlen
-    df_peaks["param_width"] = width
-    df_peaks["param_prominence"] = spe_calibrated.y_noise*calmodel.prominence_coeff
-    df_peaks.to_csv(os.path.join(upstream["calibration_nexus"]["nexus"],spe_raw.meta["Original file"]+".csv"))
-    if input_file.startswith("PST") or input_file.startswith("NMIJ") or input_file.startswith("NIST"):
-        pst = rc2const.PST_RS_dict
-        plot_peaks_stem(pst.keys(), pst.values(),df_peaks["center"], df_peaks["height"] , spe_calibrated ,label="calibrated")      
-        plot_peaks_stem(pst.keys(), pst.values(),df_peaks["center"], df_peaks["height"] , spe_raw , label="original")  
 
-        x_sample,x_reference,x_distance,df = rc2utils.match_peaks(peaks_original,pst)
-        #print(x_sample,x_reference)
-        sum_of_distances = np.sum(x_distance) / len(x_sample)
-        sum_of_differences = np.sum(np.abs(x_sample - x_reference)) / len(x_sample)
-        print("original sum of diff {:.4f} original sum of distances  {:.4f} len {}; {}".format(sum_of_differences,sum_of_distances,len(x_sample),list(zip(x_sample,x_reference))))
+    #tbd handle empty data frame due to bad prominence values
+    try:
+        df_peaks = fit_res.to_dataframe_peaks()
+        df_peaks["Original file"] = spe_raw.meta["Original file"]        
+        df_peaks[['group', 'peak']] = df_peaks.index.to_series().str.split('_', expand=True)
 
-        x_sample,x_reference,x_distance,df = rc2utils.match_peaks(peaks_calibrated,pst)
-        #print(x_sample,x_reference)
-        sum_of_differences = np.sum(np.abs(x_sample - x_reference)) / len(x_sample)
-        sum_of_distances = np.sum(x_distance) / len(x_sample)
-        print("calibrated sum of diff {:.4f} calibrated sum of distances {:.4f} len {}; {}".format(sum_of_differences,sum_of_distances,len(x_sample),list(zip(x_sample,x_reference))))
+        df_peaks["param_profile"] = profile
+        df_peaks["param_wlen"] = wlen
+        df_peaks["param_width"] = width
+        df_peaks["param_prominence"] = spe_calibrated.y_noise*calmodel.prominence_coeff
+        df_peaks.to_csv(os.path.join(upstream["calibration_nexus"]["nexus"],spe_raw.meta["Original file"]+".csv"))
+        pst = None
+        if input_file.startswith("PST") or input_file.startswith("NMIJ") or input_file.startswith("NIST"):
+            pst = rc2const.PST_RS_dict
+        elif input_file.startswith("S1N"):
+            pst = {520.45:1}
+        if pst is not None:
+            plot_peaks_stem(pst.keys(), pst.values(),df_peaks["center"], df_peaks["height"] , spe_calibrated ,label="calibrated")      
+            plot_peaks_stem(pst.keys(), pst.values(),df_peaks["center"], df_peaks["height"] , spe_raw , label="original")  
 
+            x_sample,x_reference,x_distance,df = rc2utils.match_peaks(peaks_original,pst)
+            #print(x_sample,x_reference)
+            sum_of_distances = np.sum(x_distance) / len(x_sample)
+            sum_of_differences = np.sum(np.abs(x_sample - x_reference)) / len(x_sample)
+            print("original sum of diff {:.4f} original sum of distances  {:.4f} len {}; {}".format(sum_of_differences,sum_of_distances,len(x_sample),list(zip(x_sample,x_reference))))
+
+            x_sample,x_reference,x_distance,df = rc2utils.match_peaks(peaks_calibrated,pst)
+            #print(x_sample,x_reference)
+            sum_of_differences = np.sum(np.abs(x_sample - x_reference)) / len(x_sample)
+            sum_of_distances = np.sum(x_distance) / len(x_sample)
+            print("calibrated sum of diff {:.4f} calibrated sum of distances {:.4f} len {}; {}".format(sum_of_differences,sum_of_distances,len(x_sample),list(zip(x_sample,x_reference))))
+    except Exception as err:
+        print(err)
