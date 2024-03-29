@@ -20,6 +20,8 @@ def load_spectra(root_data_folder=root_data_folder,folder_path=[files_spectra_re
     for subset in folder_path:
         spectra = {}
         for filename in os.listdir(os.path.join(root_data_folder,subset)):
+            if filename.endswith("xlsx"):
+                continue
             #print(os.path.join(folder_path,filename))
             #print(filename.split("_"))
             
