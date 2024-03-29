@@ -1,6 +1,6 @@
-on_render: tasks.hooks.on_render
-on_finish: tasks.hooks.on_finish
-on_failure: tasks.hooks.on_failure
+#on_render: tasks.hooks.on_render
+#on_finish: tasks.hooks.on_finish
+#on_failure: tasks.hooks.on_failure
 
 tasks:
   - source: tasks/load_spectra.py
@@ -55,15 +55,6 @@ tasks:
     params:
       probe: "Probe"    
          
-
-  - source: tasks/twinning_alt.py
-    product: 
-      nb: "{{output_folder}}/twinning/twinning_alt.ipynb"
-    params:
-      probe: "Probe"                   
-      spectrum_to_correct: "spectrum_normalized" 
-      spectrum_corrected_column: "spectrum_corrected"      
-      baseline_after_ledcorrection: "{{baseline_after_ledcorrection}}"      
 
   - source: tasks/twinning_peaks.py
     product: 
