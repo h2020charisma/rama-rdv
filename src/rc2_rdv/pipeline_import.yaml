@@ -1,0 +1,21 @@
+tasks:
+
+  - source: tasks/read_metadata.py
+    product: 
+      nb: "products/read_metadata.ipynb"
+      data: "{{output4import}}/metadata.xlsx"
+    params:
+      input4import: "{{input4import}}"
+
+  - source: tasks/match_metadata.py
+    product: 
+      nb: "products/match_metadata.ipynb"
+      metadata_name: "{{output4import}}/metadata_name.xlsx"
+      metadata_file: "{{output4import}}/metadata_file.xlsx"
+
+  - source: tasks/tonexus.py
+    product: 
+      nb: "products/tonexus.ipynb"
+      nexus: "{{output4import}}/spectra.nxs"
+
+    
