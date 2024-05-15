@@ -1,0 +1,32 @@
+tasks:
+
+  - source: tasks/templates_read.py
+    product: 
+      nb: "products/templates_read.ipynb"
+      h5: "{{config_output}}\\templates_read.h5"
+      xlsx: "{{config_output}}\\templates_read.xlsx"
+    params:
+      config_templates: "{{config_templates}}"
+      config_root: "{{config_root}}"
+
+  - source: tasks/templates_load.py
+    product: 
+      nb: "products/templates_load.ipynb"
+      data: "{{config_output}}/templates_load"
+    params:
+      config_root: "{{config_root}}"    
+      neon_tag: "Neon"
+      si_tag: "S0B"
+      pst_tag: "PST"
+      test_tags: "nCal,sCal"
+
+  - source: tasks/templates_calibration.py
+    product: 
+      nb: "products/templates_calibration.ipynb"
+      data: "{{config_output}}/templates_calibration"
+    params:
+      config_root: "{{config_root}}"    
+      neon_tag: "Neon"
+      si_tag: "S0B"
+      pst_tag: "PST"
+      test_tags: "nCal,sCal"      
