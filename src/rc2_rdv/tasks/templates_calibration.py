@@ -13,6 +13,7 @@ import glob
 import pandas as pd
 from ramanchada2.protocols.calibration import CalibrationModel
 import ramanchada2.misc.constants  as rc2const
+import ramanchada2 as rc2
 from ramanchada2.spectrum import from_chada
 import matplotlib.pyplot as plt
 import ramanchada2.misc.utils as rc2utils
@@ -64,10 +65,21 @@ def calibrate(op,laser_wl,spe_neon,spe_sil):
 
     return calmodel,spe_sil_calib
 
+def apply_calibration_x(calmodel: CalibrationModel, old_spe: rc2.spectrum.Spectrum, spe_units="cm-1"):
+    new_spe = old_spe
+    model_units = spe_units
+    for model in calmodel.components:
+        if model.enabled:
+            new_spe = model.process(new_spe, model_units, convert_back=False)
+            model_units = model.model_units
+    return new_spe
+
+
 Path(product["data"]).mkdir(parents=True, exist_ok=True)
 metadata = pd.read_hdf(upstream["templates_read"]["h5"], key="templates_read")
 unique_optical_paths = metadata['optical_path'].unique()
-output = upstream["templates_load"]["data"]
+source = upstream["templates_load"]["data"]
+output = product["data"]
 
 for op in unique_optical_paths:
     print(op)
@@ -75,19 +87,40 @@ for op in unique_optical_paths:
     if not op_meta['enabled'].unique()[0]:
         continue
     wavelength = op_meta['wavelength'].unique()[0]
-    _path = os.path.join(output,str(int(wavelength)),op)
+    _path_source = os.path.join(source,str(int(wavelength)),op)
+    _path_output = os.path.join(output,op)
+    Path(_path_output).mkdir(parents=True, exist_ok=True)
+    
     try:
-        spe_neon = from_chada(os.path.join(_path,"{}.cha".format(neon_tag)),dataset="/normalized")
-        spe_sil = from_chada(os.path.join(_path,"{}.cha".format(si_tag)),dataset="/normalized")
+        spe_neon = from_chada(os.path.join(_path_source,"{}.cha".format(neon_tag)),dataset="/normalized")
+        spe_sil = from_chada(os.path.join(_path_source,"{}.cha".format(si_tag)),dataset="/normalized")
         calmodel, spe_sil_calib = calibrate(op,wavelength,spe_neon,spe_sil)
-        calmodel.save(os.path.join(_path,"calibration.pkl"))   
-        spe_sil_calib.write_cha(os.path.join(_path,"{}.cha".format(si_tag)),dataset="/calibrated")
-
-        spe_pst = from_chada(os.path.join(_path,"{}.cha".format(pst_tag)),dataset="/normalized")
-        spe_pst_calib = calmodel.process(spe_pst,spe_units="nm",convert_back=False)
-        spe_pst_calib.write_cha(os.path.join(_path,"{}.cha".format(pst_tag)),dataset="/calibrated")
+        calmodel.save(os.path.join(_path_source,"calibration.pkl"))   
+        print(calmodel)
+        for tag in [si_tag,pst_tag]:
+            plt.figure()
+            try:
+                spe = from_chada(os.path.join(_path_source,"{}.cha".format(tag)),dataset="/normalized")
+                ax = spe.plot(label="original")
+                spe_calib = apply_calibration_x(calmodel,spe,spe_units="cm-1")
+                
+                #spe_calib = spe
+                #spe_calib = calmodel.components[0].process(spe_calib,spe_units="cm-1",convert_back=False)
+                #spe_calib.plot(ax=ax.twinx(),label="calibrated with neon")
+                #print(calmodel.components[0].model_units)
+                #print(calmodel.components[1].model_units)
+                #spe_calib = calmodel.components[1].process(spe_calib,spe_units=calmodel.components[0].model_units,convert_back=False)
+                spe_calib.plot(ax=ax,label="calibrated")
+                    
+                ax.set_title(tag)
+                file_path = os.path.join(_path_output,"{}.cha".format(tag))
+                if os.path.exists(file_path):
+                    os.remove(file_path)            
+                spe_calib.write_cha(file_path,dataset="/calibrated")
+            except Exception as err:
+                print(err)        
     except Exception as err:
         print(err)
-   
+    #break
 
     

@@ -98,7 +98,7 @@ for op in unique_optical_paths:
     spe_neon.plot(label="Neon",ax=ax1,color=color_map[neon_tag])
 
     for tag in [si_tag,pst_tag]:
-        boundaries = None if tag==pst_tag else (520.45-100,520.45+100)
+        boundaries = None if tag==pst_tag else (520.45-200,520.45+200)
         spe = read_tag(op_meta,tag,_path,boundaries,baseline=True, normalize = True)
         if spe is not None:
             spe.plot(label=tag,ax=ax2,color=color_map[tag])

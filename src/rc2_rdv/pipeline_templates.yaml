@@ -30,3 +30,12 @@ tasks:
       si_tag: "S0B"
       pst_tag: "PST"
       test_tags: "nCal,sCal"      
+
+  - source: tasks/templates_assessment.py
+    product: 
+      nb: "products/templates_assessment.ipynb"
+    params:
+      neon_tag: "Neon"
+      si_tag: "S0B"
+      pst_tag: "PST"
+      test_tags: "nCal,sCal"            
