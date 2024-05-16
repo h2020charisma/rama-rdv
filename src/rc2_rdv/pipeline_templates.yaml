@@ -34,6 +34,7 @@ tasks:
   - source: tasks/templates_assessment.py
     product: 
       nb: "products/templates_assessment.ipynb"
+      hnswlib: "{{config_output}}/templates_assessment"
     params:
       neon_tag: "Neon"
       si_tag: "S0B"

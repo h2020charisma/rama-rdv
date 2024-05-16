@@ -23,9 +23,10 @@ color_map = {}
 for index, string in enumerate(set([neon_tag,si_tag,pst_tag])):
     color_map[string] = plt.cm.tab10(index) 
 
-def load_spectrum(df):
+def load_spectrum(df,tag=None):
     row = 0 #tbd select based on SNR
-    return rc2.spectrum.from_local_file(os.path.join(config_root,df["filename"].iloc[row]))
+    _file = os.path.join(config_root,df["filename"].iloc[row])
+    return rc2.spectrum.from_local_file(_file),os.path.basename(_file)
 
 def process_spectrum_baseline(spe,kwargs = {"niter" : 40 }):
     try:
@@ -44,7 +45,7 @@ def process_spectrum_normalize(spe,kwargs = {}):
 def read_tag(op_meta,tag, _path, boundaries=None, baseline=False, normalize = False):    
     pst_meta = op_meta.loc[op_meta["sample"]==tag]
     if pst_meta.shape[0] > 0:
-        spe = load_spectrum(pst_meta)
+        spe,_ = load_spectrum(pst_meta,tag)
         file_path = os.path.join(_path,"{}.cha".format(tag))
         if os.path.exists(file_path):
             os.remove(file_path)        
@@ -84,7 +85,7 @@ for op in unique_optical_paths:
     _path = os.path.join(product["data"],str(int(wavelength)),op)
     Path(_path).mkdir(parents=True, exist_ok=True)
 
-    spe_neon = load_spectrum(neon_meta)
+    spe_neon, _file = load_spectrum(neon_meta,neon_tag)
     file_path = os.path.join(_path,"{}.cha".format(neon_tag))
     if os.path.exists(file_path):
         os.remove(file_path)            
@@ -95,7 +96,7 @@ for op in unique_optical_paths:
     spe_neon.write_cha(file_path,dataset = "/baseline")
     spe_neon = process_spectrum_normalize(spe_neon)
     spe_neon.write_cha(file_path,dataset = "/normalized")
-    spe_neon.plot(label="Neon",ax=ax1,color=color_map[neon_tag])
+    spe_neon.plot(label="Neon {}".format(_file),ax=ax1,color=color_map[neon_tag])
 
     for tag in [si_tag,pst_tag]:
         boundaries = None if tag==pst_tag else (520.45-200,520.45+200)

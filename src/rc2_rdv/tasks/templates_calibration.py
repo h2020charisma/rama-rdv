@@ -82,7 +82,9 @@ source = upstream["templates_load"]["data"]
 output = product["data"]
 
 for op in unique_optical_paths:
-    print(op)
+    #if op!="Zo785_785_":
+    #    continue
+    print(op)    
     op_meta = metadata.loc[metadata["optical_path"] == op]
     if not op_meta['enabled'].unique()[0]:
         continue
@@ -103,13 +105,7 @@ for op in unique_optical_paths:
                 spe = from_chada(os.path.join(_path_source,"{}.cha".format(tag)),dataset="/normalized")
                 ax = spe.plot(label="original")
                 spe_calib = apply_calibration_x(calmodel,spe,spe_units="cm-1")
-                
-                #spe_calib = spe
-                #spe_calib = calmodel.components[0].process(spe_calib,spe_units="cm-1",convert_back=False)
-                #spe_calib.plot(ax=ax.twinx(),label="calibrated with neon")
-                #print(calmodel.components[0].model_units)
-                #print(calmodel.components[1].model_units)
-                #spe_calib = calmodel.components[1].process(spe_calib,spe_units=calmodel.components[0].model_units,convert_back=False)
+            
                 spe_calib.plot(ax=ax,label="calibrated")
                     
                 ax.set_title(tag)
