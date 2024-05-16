@@ -15,6 +15,8 @@ from ramanchada2.spectrum import from_chada, Spectrum
 from ramanchada2.protocols.calibration import CalibrationModel
 import numpy as np
 from pathlib import Path
+from sklearn.cluster import SpectralBiclustering
+
 
 _source = upstream["templates_load"]["data"]
 _calibrated = upstream["templates_calibration"]["data"]
@@ -86,7 +88,7 @@ for op in unique_optical_paths:
         try:
             spe = from_chada(os.path.join(_path_source,"{}.cha".format(tag)),dataset="/normalized")
             spe.plot(label=tag,ax=ax[index],color=color_map[tag])
-
+            # play with low-pass filter (tapering/windowing function) to avoid getting noisy spectra after resampling
             #spe =  spe.resample_NUDFT_filter(x_range=(100,dim+100), xnew_bins=dim)
             #spe.y = spe.y / max(spe.y)
 
@@ -127,21 +129,40 @@ p_calibrated.save_index(os.path.join(product["hnswlib"],"calibrated.cosine.index
 def plot_distances(pairwise_distances,identifiers):
     plt.figure(figsize=(8, 6))
     plt.imshow(pairwise_distances, cmap='YlGnBu', interpolation='nearest')
-    plt.colorbar(label='Cosine Distance')
-    plt.xticks(ticks=np.arange(len(identifiers)), labels=identifiers)
+    plt.colorbar(label='Cosine similarity')
+    plt.xticks(ticks=np.arange(len(identifiers)), labels=identifiers,rotation=90)
     plt.yticks(ticks=np.arange(len(identifiers)), labels=identifiers)
     plt.title('Cosine Distance Heatmap')
-    plt.xlabel('Vectors')
-    plt.ylabel('Vectors')
+    plt.xlabel('Spectra')
+    plt.ylabel('Spectra')
     plt.show()
 
+def plot_biclustering(pairwise_distances, identifiers, title='Cosine similarity Heatmap'):
+    
+    # Perform biclustering
+    model = SpectralBiclustering(n_clusters=(3, 3), method='log', random_state=0)
+    model.fit(pairwise_distances)
+    
+    # Reorder the rows and columns based on the clustering
+    fit_data = pairwise_distances[np.argsort(model.row_labels_)]
+    fit_data = fit_data[:, np.argsort(model.column_labels_)]
 
-from sklearn.metrics.pairwise import cosine_distances
+    plt.figure(figsize=(8, 6))
+    plt.imshow(fit_data, cmap='YlGnBu', interpolation='nearest', vmin=0, vmax=1)
+    plt.colorbar(label='Cosine similarity')
+    plt.xticks(ticks=np.arange(len(identifiers)), labels=np.array(identifiers)[np.argsort(model.column_labels_)], rotation=90)
+    plt.yticks(ticks=np.arange(len(identifiers)), labels=np.array(identifiers)[np.argsort(model.row_labels_)])
+    plt.title("{} [{:.2f}|{:.2f}|{:.2f}]".format(title,np.min(pairwise_distances),np.mean(pairwise_distances),np.max(pairwise_distances)))
+    plt.xlabel('Spectra')
+    plt.ylabel('Spectra')
+    plt.show()
+
+from sklearn.metrics.pairwise import cosine_similarity
 
 for index,pdf in enumerate(pdf_original):
     fig, ax = plt.subplots(1, 1, figsize=(15,2))    
     ax.plot(xlinspace,pdf,label=ids_original.index.values[index])
 
-plot_distances( cosine_distances(pdf_original), ids_original.index.values)
+plot_biclustering( cosine_similarity(pdf_original), ids_original['unique_optical_paths'].values,title="Cosine similarity uncalibrated spectra")
 
-plot_distances( cosine_distances(pdf_calibrated), ids_calibrated.index.values)
+plot_biclustering( cosine_similarity(pdf_calibrated), ids_calibrated['unique_optical_paths'].values,title="Cosine similarity calibrated spectra")
