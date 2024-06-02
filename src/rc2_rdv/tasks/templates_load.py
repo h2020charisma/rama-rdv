@@ -42,7 +42,7 @@ def process_spectrum_normalize(spe,kwargs = {}):
         print(err)
         return spe
 
-def read_tag(op_meta,tag, _path, boundaries=None, baseline=False, normalize = False):    
+def read_tag(op_meta,tag, _path, boundaries=None, baseline=False, normalize = False, trim_left = 100):    
     pst_meta = op_meta.loc[op_meta["sample"]==tag]
     if pst_meta.shape[0] > 0:
         spe,_ = load_spectrum(pst_meta,tag)
@@ -72,10 +72,12 @@ for op in unique_optical_paths:
     wavelength = op_meta['wavelength'].unique()[0]
     neon_meta = op_meta.loc[op_meta["sample"]==neon_tag]
     if neon_meta.shape[0] == 0:
+        print(op,"No Neon")
         continue
 
     si_meta = op_meta.loc[op_meta["sample"]==si_tag]
     if si_meta.shape[0] == 0:
+        print(op,"No Si")
         continue
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15,2))    
@@ -92,20 +94,28 @@ for op in unique_optical_paths:
     if min(spe_neon.x)<0:
         spe_neon = spe_neon.trim_axes(method='x-axis',boundaries=(trim_left,max(spe_neon.x)))    
     spe_neon.write_cha(file_path,dataset = "/raw")
-    spe_neon = process_spectrum_baseline(spe_neon)        
-    spe_neon.write_cha(file_path,dataset = "/baseline")
-    spe_neon = process_spectrum_normalize(spe_neon)
-    spe_neon.write_cha(file_path,dataset = "/normalized")
+
+    try:
+        spe_neon = process_spectrum_baseline(spe_neon)        
+        spe_neon.write_cha(file_path,dataset = "/baseline")
+    except Exception as err:
+        print(err)
+    try:
+        spe_neon = process_spectrum_normalize(spe_neon)
+        spe_neon.write_cha(file_path,dataset = "/normalized")
+    except Exception as err:
+        print(err)
+
     spe_neon.plot(label="Neon {}".format(_file),ax=ax1,color=color_map[neon_tag])
 
     for tag in [si_tag,pst_tag]:
         boundaries = None if tag==pst_tag else (520.45-200,520.45+200)
-        spe = read_tag(op_meta,tag,_path,boundaries,baseline=True, normalize = True)
+        spe = read_tag(op_meta,tag,_path,boundaries,baseline=True, normalize = True,trim_left=trim_left)
         if spe is not None:
             spe.plot(label=tag,ax=ax2,color=color_map[tag])
 
     for tag in test_tags:
-        spe = read_tag(op_meta,tag,_path,boundaries=None,baseline=True, normalize = True)
+        spe = read_tag(op_meta,tag,_path,boundaries=None,baseline=True, normalize = True,trim_left=trim_left)
         if spe is not None:
             spe.plot(label=tag,ax=ax2,color="#AAAAAA")
 
