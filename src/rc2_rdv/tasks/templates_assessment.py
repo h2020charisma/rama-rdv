@@ -4,7 +4,6 @@ product = None
 neon_tag = None
 si_tag = None
 pst_tag = None
-test_tags = None
 # -
 
 import hnswlib
@@ -32,11 +31,11 @@ for index, string in enumerate(set([neon_tag,si_tag,pst_tag])):
 
 trim_left = 100
 
-dim = 2048*2
-p_original = hnswlib.Index(space = "cosine", dim=dim)
-p_original.init_index(max_elements = len(unique_optical_paths)*2, ef_construction = 10, M = 16)
-p_calibrated = hnswlib.Index(space = "cosine", dim=dim)
-p_calibrated.init_index(max_elements = len(unique_optical_paths)*2, ef_construction = 10, M = 16)
+dim = 1024*3
+#p_original = hnswlib.Index(space = "cosine", dim=dim)
+#p_original.init_index(max_elements = len(unique_optical_paths)*2, ef_construction = 10, M = 16)
+#p_calibrated = hnswlib.Index(space = "cosine", dim=dim)
+#p_calibrated.init_index(max_elements = len(unique_optical_paths)*2, ef_construction = 10, M = 16)
 xlinspace = np.linspace(100,dim+100,num=dim)
 
 ids_original = []
@@ -68,14 +67,16 @@ for op in unique_optical_paths:
     index = 0
     
     ax[index].set_title(tag)
+    tx = ax[index].twinx()
     try:
         spe = from_chada(os.path.join(_path_calibrated,"{}.cha".format(tag)),dataset="/calibrated")
-        spe.plot(label="{} calibrated".format(tag),ax=ax[index],color="#FF0000")
-            
-        (spe,hist_dist,_) = StudyRaman.spectra2dist(spe,xcrop = None,remove_baseline=False)
+        spe.plot(label="{} calibrated".format(tag),ax=tx,color="#FF0000")
+        y_copy = np.copy(spe.y)
+        y_copy[y_copy < 0] = 0
+        (spe,hist_dist,_) = StudyRaman.spectra2dist(Spectrum(spe.x,y_copy),xcrop = None,remove_baseline=False)
         pdf = hist_dist.pdf(xlinspace)
 
-        pdf = pdf/max(pdf)
+        pdf = np.max(y_copy)*pdf/max(pdf)
             #ax[index].plot(xlinspace,pdf,label="pdf",color="black")
             #pdf_calibrated.append(spe.y)
         pdf_calibrated.append(pdf)
@@ -84,15 +85,16 @@ for op in unique_optical_paths:
     except Exception as err:
         print(err)
     try:
-        spe = from_chada(os.path.join(_path_source,"{}.cha".format(tag)),dataset="/normalized")
-        spe.plot(label=tag,ax=ax[index],color=color_map[tag])
+        spe = from_chada(os.path.join(_path_source,"{}.cha".format(tag)),dataset="/raw")
+        spe.plot(label=tag,ax=ax[index],color="#0000FF",linestyle='--')
             # play with low-pass filter (tapering/windowing function) to avoid getting noisy spectra after resampling
             #spe =  spe.resample_NUDFT_filter(x_range=(100,dim+100), xnew_bins=dim)
             #spe.y = spe.y / max(spe.y)
-
-        (spe,hist_dist,_) = StudyRaman.spectra2dist(spe,xcrop = None,remove_baseline=False)
+        y_copy = np.copy(spe.y)
+        y_copy[y_copy < 0] = 0
+        (spe,hist_dist,_) = StudyRaman.spectra2dist(Spectrum(spe.x,y_copy),xcrop = None,remove_baseline=False)
         pdf = hist_dist.pdf(xlinspace)
-        pdf = pdf/max(pdf)
+        pdf = np.max(y_copy)*pdf/max(pdf)
         pdf_original.append(pdf)
             #ax[index+1].plot(xlinspace,pdf,label="pdf",color=color_map[tag])
             #spe.plot(label=tag,ax=ax[index],color="black")
@@ -111,14 +113,14 @@ ids_calibrated.to_csv(os.path.join(product["hnswlib"],"ids_calibrated.csv"))
 print(len(pdf_original),len(ids_original.index.values))
 print(len(pdf_calibrated),len(ids_calibrated.index.values))
 
-p_original.add_items(pdf_original, ids_original.index.values)
-p_original.set_ef(50)
-p_original.save_index(os.path.join(product["hnswlib"],"normalized.cosine.index"))
+#p_original.add_items(pdf_original, ids_original.index.values)
+#p_original.set_ef(50)
+#p_original.save_index(os.path.join(product["hnswlib"],"normalized.cosine.index"))
 
 
-p_calibrated.add_items(pdf_calibrated, ids_calibrated.index.values)
-p_calibrated.set_ef(50)
-p_calibrated.save_index(os.path.join(product["hnswlib"],"calibrated.cosine.index"))
+#p_calibrated.add_items(pdf_calibrated, ids_calibrated.index.values)
+#p_calibrated.set_ef(50)
+#p_calibrated.save_index(os.path.join(product["hnswlib"],"calibrated.cosine.index"))
 
 
 def plot_distances(pairwise_distances,identifiers):
@@ -167,6 +169,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 #plt.legend()
 
 tag = ["original","x-calibrated"]
+ids = [ids_original,ids_calibrated]
 fig, ax = plt.subplots(2, 2, figsize=(16,8))  
 for index,pdf in enumerate([pdf_original, pdf_calibrated]):
     cos_sim_matrix =  cosine_similarity(pdf)
@@ -177,6 +180,6 @@ for index,pdf in enumerate([pdf_original, pdf_calibrated]):
     plt.title('Distribution of Cosine Similarities ({} spectra)'.format(tag[index]))
     plt.xlabel('Cosine Similarity')
     plt.ylabel('Frequency')
-    plot_biclustering(cos_sim_matrix, ids_original['unique_optical_paths'].values,title="Cosine similarity {} spectra".format(tag[index]),ax=ax[index,1])
+    plot_biclustering(cos_sim_matrix, ids[index]['unique_optical_paths'].values,title="Cosine similarity {} spectra".format(tag[index]),ax=ax[index,1])
     ax[index,0].set_title("{} [{:.2f}|{:.2f}|{:.2f}]".format("Cosine similarity histogram", np.min(cos_sim_matrix), np.mean(cos_sim_matrix), np.max(cos_sim_matrix)))
 plt.show()

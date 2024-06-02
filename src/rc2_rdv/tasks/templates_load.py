@@ -114,7 +114,7 @@ for op in unique_optical_paths:
         if spe is not None:
             spe.plot(label=tag,ax=ax2,color=color_map[tag])
 
-    for tag in test_tags:
+    for tag in test_tags.split(","):
         spe = read_tag(op_meta,tag,_path,boundaries=None,baseline=True, normalize = True,trim_left=trim_left)
         if spe is not None:
             spe.plot(label=tag,ax=ax2,color="#AAAAAA")

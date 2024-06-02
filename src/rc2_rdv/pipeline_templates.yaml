@@ -32,11 +32,13 @@ tasks:
       test_tags: "nCal,sCal"      
 
   - source: tasks/templates_assessment.py
+    name: templates_assessment-[[pst_tag]]  
     product: 
-      nb: "products/templates_assessment.ipynb"
-      hnswlib: "{{config_output}}/templates_assessment"
+      nb: "products/templates_assessment-[[pst_tag]].ipynb"
+      hnswlib: "{{config_output}}/templates_assessment-[[pst_tag]]"
     params:
       neon_tag: "Neon"
       si_tag: "S0B"
-      pst_tag: "PST"
-      test_tags: "nCal,sCal"            
+    grid:
+        pst_tag: ["PST","sCal","nCal","S0B"]
+         

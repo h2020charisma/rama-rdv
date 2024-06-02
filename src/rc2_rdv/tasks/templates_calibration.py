@@ -100,18 +100,19 @@ for op in unique_optical_paths:
         calmodel, spe_sil_ne_calib, spe_sil_calib = calibrate(op,wavelength,spe_neon,spe_sil)
         calmodel.save(os.path.join(_path_source,"calibration.pkl"))   
         #print(calmodel)
-        fig, axes = plt.subplots(1, 3, figsize=(15,2))  
+        tags = [si_tag,pst_tag]+test_tags.split(",")
+        fig, axes = plt.subplots(len(tags)+1,1, figsize=(15,6))  
         fig.suptitle(op)   
         calmodel.plot(ax=axes[0])      
         axes[0].set_title("Neon")    
-        for index,tag in enumerate([si_tag,pst_tag]):
+        for index,tag in enumerate(tags):
 
             try:
-                spe = from_chada(os.path.join(_path_source,"{}.cha".format(tag)),dataset="/normalized")
+                spe = from_chada(os.path.join(_path_source,"{}.cha".format(tag)),dataset="/raw")
                 spe.plot(label=f"{tag} original",ax=axes[index+1])
                 spe_calib = apply_calibration_x(calmodel,spe,spe_units="cm-1")
             
-                spe_calib.plot(ax=axes[index+1],label=f"{tag} calibrated")
+                spe_calib.plot(ax=axes[index+1].twinx(),label=f"{tag} calibrated")
                     
                 #axes[index+1].set_title(tag)
                 file_path = os.path.join(_path_output,"{}.cha".format(tag))
