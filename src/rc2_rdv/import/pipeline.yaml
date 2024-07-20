@@ -1,0 +1,97 @@
+tasks:
+  - source: metadata.read_metadata
+    product:
+      data: products/metadata/
+#      nb: products/metadata.get.ipynb
+    params:
+      root_folder: "{{root_folder}}"
+      config_input: "{{config_input}}"
+
+# tbd task to create provider/instrument/wavelength ; if not existing the submit will fail
+  - source: createinvestigation.py
+    product:
+      nb: products/createinvestigation.ipynb
+    params:
+      hs_endpoint: "{{hs_endpoint}}"
+      hsds_investigation: "{{hsds_investigation}}"
+      keycloak_server_url: "{{keycloak_server_url}}"
+      keycloak_client_id: "{{keycloak_client_id}}"
+      keycloak_realm_name: "{{keycloak_realm_name}}"
+      hs_admin_username: "{{hs_admin}}"
+      hs_admin_password: "{{hs_adminpassword}}"
+
+
+  - source: import.py
+    product:
+      data: products/logs/
+      nb: products/import.ipynb
+    params:
+      config_input: "{{config_input}}"
+      metadata_root: "products/metadata/"
+      ramandb_api: "{{ramandb_api}}"
+      hsds_investigation: "{{hsds_investigation}}"
+      dry_run: "{{dry_run}}"
+      keycloak_server_url: "{{keycloak_server_url}}"
+      keycloak_client_id: "{{keycloak_client_id}}"
+      keycloak_realm_name: "{{keycloak_realm_name}}"
+      hs_username: "{{hs_username}}"
+      hs_password: "{{hs_password}}"
+
+  - source: task_datamodel.py
+    product:
+      data: "{{charisma_json}}_kc_{{hsds_investigation}}.json"
+      nb: products/datamodel.ipynb
+    params:
+      hsds_investigation: "{{hsds_investigation}}"
+      config_input: "{{config_input}}"
+      keycloak_server_url: "{{keycloak_server_url}}"
+      keycloak_client_id: "{{keycloak_client_id}}"
+      keycloak_realm_name: "{{keycloak_realm_name}}"
+      hs_username: "{{hs_username}}"
+      hs_password: "{{hs_password}}"
+
+  - source: task_index_evaluation.py
+    product:
+      data: products/index
+      nb: products/task_index_evaluation.ipynb
+    params:
+      keycloak_server_url: "{{keycloak_server_url}}"
+      keycloak_client_id: "{{keycloak_client_id}}"
+      keycloak_realm_name: "{{keycloak_realm_name}}"
+      hs_username: "{{hs_username}}"
+      hs_password: "{{hs_password}}"
+
+  - source: auth.py
+    product:
+      nb: products/auth.ipynb
+    params:
+      hsds_investigation: "{{hsds_investigation}}"
+      keycloak_server_url: "{{keycloak_server_url}}"
+      keycloak_client_id: "{{keycloak_client_id}}"
+      keycloak_realm_name: "{{keycloak_realm_name}}"
+      hs_username: "{{hs_username}}"
+      hs_password: "{{hs_password}}"
+      hs_endpoint: "{{hs_endpoint}}"
+      ramandb_api: "{{ramandb_api}}"
+
+  - source: tasks/task_template2metadata.py
+    product:
+      data: products/template_metadata.json
+      nb: products/task_template2metadata.ipynb
+    params:
+      root_peakfitting_folder: "{{root_peakfitting_folder}}"
+
+  - source: tasks/task_templateimport.py
+    product:
+      data: products/task_templateimport.log
+      nb: products/task_templateimport.ipynb
+    params:
+      root_peakfitting_folder: "{{root_peakfitting_folder}}"
+      metadatapath: products/template_metadata.json
+      ramandb_api: "{{ramandb_api}}"
+      hsds_investigation: "{{hsds_investigation}}"
+      keycloak_server_url: "{{keycloak_server_url}}"
+      keycloak_client_id: "{{keycloak_client_id}}"
+      keycloak_realm_name: "{{keycloak_realm_name}}"
+      hs_username: "{{hs_username}}"
+      hs_password: "{{hs_password}}"
