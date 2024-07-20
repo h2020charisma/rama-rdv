@@ -16,6 +16,10 @@ tasks:
   - source: tasks/tonexus.py
     product: 
       nb: "products/tonexus.ipynb"
-      nexus: "{{output4import}}/spectra.nxs"
-
+      nexus: "{{output4import}}/nexus"
+    params:      
+      provider: "{{provider}}"
+      instrument: "{{instrument}}"
+      wavelength: "{{wavelength}}"
+      investigation: "{{investigation}}"
     
