@@ -12,7 +12,6 @@ tasks:
     product:
       nb: products/createinvestigation.ipynb
     params:
-      hs_endpoint: "{{hs_endpoint}}"
       hsds_investigation: "{{hsds_investigation}}"
       keycloak_server_url: "{{keycloak_server_url}}"
       keycloak_client_id: "{{keycloak_client_id}}"
@@ -73,25 +72,3 @@ tasks:
       hs_password: "{{hs_password}}"
       hs_endpoint: "{{hs_endpoint}}"
       ramandb_api: "{{ramandb_api}}"
-
-  - source: tasks/task_template2metadata.py
-    product:
-      data: products/template_metadata.json
-      nb: products/task_template2metadata.ipynb
-    params:
-      root_peakfitting_folder: "{{root_peakfitting_folder}}"
-
-  - source: tasks/task_templateimport.py
-    product:
-      data: products/task_templateimport.log
-      nb: products/task_templateimport.ipynb
-    params:
-      root_peakfitting_folder: "{{root_peakfitting_folder}}"
-      metadatapath: products/template_metadata.json
-      ramandb_api: "{{ramandb_api}}"
-      hsds_investigation: "{{hsds_investigation}}"
-      keycloak_server_url: "{{keycloak_server_url}}"
-      keycloak_client_id: "{{keycloak_client_id}}"
-      keycloak_realm_name: "{{keycloak_realm_name}}"
-      hs_username: "{{hs_username}}"
-      hs_password: "{{hs_password}}"

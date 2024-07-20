@@ -3,7 +3,7 @@ import uuid
 import json
 import h5pyd
 from datetime import date
-upstream = []
+upstream = ["createinvestigation"]
 product = None
 hsds_investigation = None
 hs_endpoint = None
@@ -19,8 +19,7 @@ keycloak_realm_name = None
 from dependency_injector import containers, providers
 from dependency_injector.wiring import Provide, inject
 from keycloak import KeycloakOpenID
-from services.serviceclasses import TokenService, QueryService
-
+from pynanomapper.clients.authservice import TokenService, QueryService
 
 class Container(containers.DeclarativeContainer):
     kcclient = providers.Singleton(
