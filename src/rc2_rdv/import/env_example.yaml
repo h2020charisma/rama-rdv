@@ -1,0 +1,24 @@
+
+root_folder: "CHARISMA\\Data Raman RR1\\532nm"
+config_input: "./config.json"
+index_enabled_only : false
+
+
+hsds_investigation: "SANDBOX"
+ramandb_api: "http://127.0.0.1:5000/"
+hs_endpoint: "https://hsds-kc.ideaconsult.net"
+
+domain_to_delete: "/SANDBOX2/"
+
+keycloak_server_url: "https://iam.ideaconsult.net/"
+keycloak_client_id: "idea-ui"
+keycloak_realm_name: "nano"
+hs_username: "changeit"
+
+
+#if true do not submit to hsds
+dry_run: False
+
+
+hs_admin: "changeit"
+hs_adminpassword: "changeit"
