@@ -38,11 +38,11 @@ def delete_folder(domain):
     print(domain)
     try:
         # Open the folder
-        f = h5pyd.Folder(domain, 'r')
-        n = f._getSubdomains()
-        if n>0:
-            for item in f._subdomains:
-                print(item)
+        with h5pyd.Folder(domain, 'r') as f:
+            n = f._getSubdomains()
+            if n>0:
+                for item in f._subdomains:
+                    print(item)
                 #item_path = f"{domain}/{item}"
                 #print(item_path)
                 #if isinstance(f[item], h5pyd.Group):
@@ -50,29 +50,27 @@ def delete_folder(domain):
                 #else:
                 #    del f[item]  # Delete files
         # Close the folder before deletion
-        f.close()
-        print("# Delete the folder itself")
-        f = h5pyd.Folder(domain, 'w')
-        f.delete()
-        print(f"Folder {domain} has been deleted.")
+        #print("# Delete the folder itself")
+        #f = h5pyd.Folder(domain, 'w')
+        #f.delete()
+        #print(f"Folder {domain} has been deleted.")
     except Exception as e:
         print(f"Error deleting folder {domain}: {e}")
 
 @inject
 def main(ts = Provide[Container.h5service]):
     ts.login(hs_admin_username,hs_admin_password)
-    
+    print("logged in")
     try:
         #_folder = ts.check_domain(investigation_to_delete)
         #delete_folder(investigation_to_delete)
         print(domain_to_delete)
-        if domain_to_delete.endswith("/"):
-            f = h5pyd.Folder(domain_to_delete,"w")
-            print(f)
-        else:
-            f = h5pyd.File(domain_to_delete,"w")
-            print(f)
-        del f
+        _folder = ts.Folder(domain_to_delete)
+        dparent = _folder.parent
+        if dparent == '//':
+            dparent = '/'
+        with ts.Folder(dparent, mode='a') as f:
+            del f[domain_to_delete.strip('/')]
         
     except Exception as err:
         print(err)
