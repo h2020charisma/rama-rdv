@@ -1,5 +1,5 @@
 # + tags=["parameters"]
-upstream = []
+upstream = ["auth"]
 product = None
 hsds_investigation = None
 hs_admin_username = None
@@ -12,6 +12,7 @@ keycloak_realm_name = None
 from dependency_injector import containers, providers
 from dependency_injector.wiring import Provide, inject
 from keycloak import KeycloakOpenID
+import json
 
 from pynanomapper.clients.authservice import TokenService
 from pynanomapper.clients.service_charisma import H5Service
@@ -33,20 +34,28 @@ class Container(containers.DeclarativeContainer):
         tokenservice = tokenservice
     )
 
-
 @inject
 def main(ts = Provide[Container.h5service]):
     ts.login(hs_admin_username,hs_admin_password)
-    try:
-        domain = "/{}/".format(hsds_investigation)
-        _folder = ts.create_domain(domain)
-        #https://hsds-kc.ideaconsult.net/domains
-        
-        _folder = ts.check_domain(domain)
-        print(_folder)
+    
+    with open(upstream["auth"]["domains"], 'r') as json_file:
+        tld = json.load(json_file)
 
+    domain = "/{}/".format(hsds_investigation)
+    if any(f["name"] == "/{}".format(hsds_investigation) and f["class"] == "folder" for f in tld["domains"]):
+        print("{domain} domain already exists")        
+
+    domain = "/{}/".format(hsds_investigation)
+    try:
+        _folder = ts.check_domain(domain)
     except Exception as err:
-        print(err)
+        try:
+            _folder = ts.create_domain(domain)
+            #https://hsds-kc.ideaconsult.net/domains
+            _folder = ts.check_domain(domain)
+            print(_folder)
+        except Exception as err:
+            print(err)
     finally:
         ts.logout()
 

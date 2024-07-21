@@ -1,5 +1,5 @@
 # + tags=["parameters"]
-upstream = []
+upstream = ["auth"]
 product = None
 domain_to_delete = None
 hs_admin_username = None
