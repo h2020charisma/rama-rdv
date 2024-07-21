@@ -17,6 +17,7 @@ tasks:
       keycloak_realm_name: "{{keycloak_realm_name}}"
       hs_admin_username: "{{hs_admin}}"
       hs_admin_password: "{{hs_adminpassword}}"
+      remove_files: "{{remove_files}}"
 
 # tbd task to create provider/instrument/wavelength ; if not existing the submit will fail
   - source: createinvestigation.py
@@ -83,3 +84,12 @@ tasks:
       hs_password: "{{hs_password}}"
       hs_endpoint: "{{hs_endpoint}}"
       ramandb_api: "{{ramandb_api}}"
+
+  - source: ../tasks/templates_read.py
+    product: 
+      nb: "products/templates_read.ipynb"
+      h5: "{{config_output}}\\templates_read.h5"
+      xlsx: "{{config_output}}\\templates_read.xlsx"
+    params:
+      config_templates: "{{config_templates}}"
+      config_root: "{{config_root}}"
