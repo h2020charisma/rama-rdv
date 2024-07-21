@@ -74,4 +74,13 @@ tasks:
       hs_username: "{{hs_username}}"
       hs_password: "{{hs_password}}"
 
-
+  - source: task_solrquery.py
+    product:
+      nb:  products/task_solrquery.ipynb
+    params:
+      keycloak_server_url: "{{keycloak_server_url}}"
+      keycloak_client_id: "{{keycloak_client_id}}"
+      keycloak_realm_name: "{{keycloak_realm_name}}"
+      hs_username: "{{hs_username}}"
+      hs_password: "{{hs_password}}"
+      query_file: "{{query_file}}"
