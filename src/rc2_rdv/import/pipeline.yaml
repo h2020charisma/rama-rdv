@@ -7,17 +7,6 @@ tasks:
       root_folder: "{{root_folder}}"
       config_input: "{{config_input}}"
 
-  - source: delete_investigation.py
-    product:
-      nb: products/delete_investigation.ipynb
-    params:
-      domain_to_delete: "{{domain_to_delete}}"
-      keycloak_server_url: "{{keycloak_server_url}}"
-      keycloak_client_id: "{{keycloak_client_id}}"
-      keycloak_realm_name: "{{keycloak_realm_name}}"
-      hs_admin_username: "{{hs_admin}}"
-      hs_admin_password: "{{hs_adminpassword}}"
-      remove_files: "{{remove_files}}"
 
 # tbd task to create provider/instrument/wavelength ; if not existing the submit will fail
   - source: createinvestigation.py
