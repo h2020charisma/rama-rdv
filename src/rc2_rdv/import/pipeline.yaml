@@ -1,12 +1,4 @@
 tasks:
-  - source: metadata.read_metadata
-    product:
-      data: products/metadata/
-#      nb: products/metadata.get.ipynb
-    params:
-      root_folder: "{{root_folder}}"
-      config_input: "{{config_input}}"
-
 
 # tbd task to create provider/instrument/wavelength ; if not existing the submit will fail
   - source: createinvestigation.py
@@ -20,46 +12,42 @@ tasks:
       hs_admin_username: "{{hs_admin}}"
       hs_admin_password: "{{hs_adminpassword}}"
 
-
-  - source: import.py
-    product:
-      data: products/logs/
-      nb: products/import.ipynb
+  - source: ../tasks/read_metadata.py
+    product: 
+      nb: "products/read_metadata.ipynb"
+      data: "products/metadata.xlsx"
     params:
-      config_input: "{{config_input}}"
-      metadata_root: "products/metadata/"
+      input4import: "{{input4import}}"
+
+  - source: ../tasks/match_metadata.py
+    product: 
+      nb: "products/match_metadata.ipynb"
+      metadata_name: "products/metadata_name.xlsx"
+      metadata_file: "products/metadata_file.xlsx"
+
+  - source: ../tasks/templates_read.py
+    product: 
+      nb: "products/templates_read.ipynb"
+      h5: "products\\templates_read.h5"
+      xlsx: "products\\templates_read.xlsx"
+    params:
+      config_templates: "{{config_templates}}"
+      config_root: "{{config_root}}"
+
+  - source: templates_import.py
+    product:
+      data: products/templates_import.log
+      nb: products/templates_import.ipynb
+    params:
+      config_root: "{{config_root}}"
       ramandb_api: "{{ramandb_api}}"
       hsds_investigation: "{{hsds_investigation}}"
-      dry_run: "{{dry_run}}"
       keycloak_server_url: "{{keycloak_server_url}}"
       keycloak_client_id: "{{keycloak_client_id}}"
       keycloak_realm_name: "{{keycloak_realm_name}}"
       hs_username: "{{hs_username}}"
       hs_password: "{{hs_password}}"
-
-  - source: task_datamodel.py
-    product:
-      data: "{{charisma_json}}_kc_{{hsds_investigation}}.json"
-      nb: products/datamodel.ipynb
-    params:
-      hsds_investigation: "{{hsds_investigation}}"
-      config_input: "{{config_input}}"
-      keycloak_server_url: "{{keycloak_server_url}}"
-      keycloak_client_id: "{{keycloak_client_id}}"
-      keycloak_realm_name: "{{keycloak_realm_name}}"
-      hs_username: "{{hs_username}}"
-      hs_password: "{{hs_password}}"
-
-  - source: task_index_evaluation.py
-    product:
-      data: products/index
-      nb: products/task_index_evaluation.ipynb
-    params:
-      keycloak_server_url: "{{keycloak_server_url}}"
-      keycloak_client_id: "{{keycloak_client_id}}"
-      keycloak_realm_name: "{{keycloak_realm_name}}"
-      hs_username: "{{hs_username}}"
-      hs_password: "{{hs_password}}"
+      dry_run: False
 
   - source: auth.py
     product:
@@ -74,11 +62,16 @@ tasks:
       hs_endpoint: "{{hs_endpoint}}"
       ramandb_api: "{{ramandb_api}}"
 
-  - source: ../tasks/templates_read.py
-    product: 
-      nb: "products/templates_read.ipynb"
-      h5: "{{config_output}}\\templates_read.h5"
-      xlsx: "{{config_output}}\\templates_read.xlsx"
+  - source: task_export2solr.py
+    product:
+      data: "{{charisma_json}}_kc_{{hsds_investigation}}.json"
+      nb: products/task_export2solr.ipynb
     params:
-      config_templates: "{{config_templates}}"
-      config_root: "{{config_root}}"
+      hsds_investigation: "{{hsds_investigation}}"
+      keycloak_server_url: "{{keycloak_server_url}}"
+      keycloak_client_id: "{{keycloak_client_id}}"
+      keycloak_realm_name: "{{keycloak_realm_name}}"
+      hs_username: "{{hs_username}}"
+      hs_password: "{{hs_password}}"
+
+
