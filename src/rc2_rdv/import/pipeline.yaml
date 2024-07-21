@@ -75,8 +75,8 @@ tasks:
   - source: auth.py
     product:
       nb: products/auth.ipynb
+      domains: products/domains.json
     params:
-      hsds_investigation: "{{hsds_investigation}}"
       keycloak_server_url: "{{keycloak_server_url}}"
       keycloak_client_id: "{{keycloak_client_id}}"
       keycloak_realm_name: "{{keycloak_realm_name}}"

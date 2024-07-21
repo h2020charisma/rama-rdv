@@ -1,11 +1,7 @@
 # + tags=["parameters"]
-import uuid
-import json
-import h5pyd
 from datetime import date
-upstream = ["createinvestigation"]
+upstream = []
 product = None
-hsds_investigation = None
 hs_endpoint = None
 ramandb_api = None
 hs_username = None
@@ -16,6 +12,7 @@ keycloak_realm_name = None
 
 # -
 
+import json
 from dependency_injector import containers, providers
 from dependency_injector.wiring import Provide, inject
 from keycloak import KeycloakOpenID
@@ -48,13 +45,14 @@ def main(qs = Provide[Container.queryservice]):
         try:
             api_metadata = "{}metadata".format(ramandb_api)
             print(api_metadata)
-            response = qs.get(api_metadata, params={"domain" : "/{}/".format(hsds_investigation)})
-            print(response.json())
         except Exception as err:
             print(err)
         try:
-            response = qs.get(hs_endpoint+"/domains", params={"domain" : "/{}/".format(hsds_investigation)})
-            print(response.json())
+            response = qs.get(hs_endpoint+"/domains", params={"domain" : "/"})
+            
+            with open(product["domains"], 'w') as json_file:
+                json.dump(response.json(), json_file, indent=4)
+
         except Exception as err:
             print(err)
 

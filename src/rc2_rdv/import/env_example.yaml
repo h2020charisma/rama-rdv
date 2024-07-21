@@ -9,6 +9,7 @@ ramandb_api: "http://127.0.0.1:5000/"
 hs_endpoint: "https://hsds-kc.ideaconsult.net"
 
 domain_to_delete: "/SANDBOX2/"
+remove_files: False
 
 keycloak_server_url: "https://iam.ideaconsult.net/"
 keycloak_client_id: "idea-ui"
