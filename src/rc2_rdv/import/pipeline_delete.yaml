@@ -11,3 +11,16 @@ tasks:
       hs_admin_username: "{{hs_admin}}"
       hs_admin_password: "{{hs_adminpassword}}"
       remove_files: "{{remove_files}}"
+
+  - source: auth.py
+    product:
+      nb: products/auth.ipynb
+      domains: products/domains.json
+    params:
+      keycloak_server_url: "{{keycloak_server_url}}"
+      keycloak_client_id: "{{keycloak_client_id}}"
+      keycloak_realm_name: "{{keycloak_realm_name}}"
+      hs_username: "{{hs_username}}"
+      hs_password: "{{hs_password}}"
+      hs_endpoint: "{{hs_endpoint}}"
+      ramandb_api: "{{ramandb_api}}"

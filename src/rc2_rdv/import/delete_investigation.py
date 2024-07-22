@@ -45,7 +45,7 @@ def delete_folder(h5service,domain,remove_files=False):
             if n>0:
                 for item in _folder._subdomains:
                     if item["class"] == "folder":
-                        delete_folder(h5service,"{}/".format(item["name"]))
+                        delete_folder(h5service,"{}/".format(item["name"]),remove_files)
                     elif item["class"] == "domain":
                         if remove_files:
                             base_name = os.path.basename(item["name"])    
@@ -77,7 +77,7 @@ def main(ts = Provide[Container.h5service]):
         ts.logout()
 
 
-
+print(remove_files)
 print(__name__)
 container = Container()
 container.init_resources()
