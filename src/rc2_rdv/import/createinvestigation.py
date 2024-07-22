@@ -51,6 +51,7 @@ def main(ts = Provide[Container.h5service]):
     except Exception as err:
         try:
             _folder = ts.create_domain(domain)
+            _folder.putACL({'userName': 'g:charisma', 'create': False, 'read': True, 'update': False, 'delete': False, 'readACL': False, 'updateACL': False})
             #https://hsds-kc.ideaconsult.net/domains
             _folder = ts.check_domain(domain)
             print(_folder)
