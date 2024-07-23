@@ -1,0 +1,35 @@
+tasks:
+
+  - source: auth.py
+    product:
+      nb: products/auth.ipynb
+      domains: products/domains.json
+    params:
+      keycloak_server_url: "{{keycloak_server_url}}"
+      keycloak_client_id: "{{keycloak_client_id}}"
+      keycloak_realm_name: "{{keycloak_realm_name}}"
+      hs_username: "{{hs_username}}"
+      hs_password: "{{hs_password}}"
+      hs_endpoint: "{{hs_endpoint}}"
+      ramandb_api: "{{ramandb_api}}"
+
+# tbd task to create provider/instrument/wavelength ; if not existing the submit will fail
+  - source: createinvestigation.py
+    product:
+      nb: products/createinvestigation.ipynb
+    params:
+      hsds_investigation: "{{hsds_investigation}}"
+      keycloak_server_url: "{{keycloak_server_url}}"
+      keycloak_client_id: "{{keycloak_client_id}}"
+      keycloak_realm_name: "{{keycloak_realm_name}}"
+      hs_admin_username: "{{hs_admin}}"
+      hs_admin_password: "{{hs_adminpassword}}"
+
+
+# tbd task to create provider/instrument/wavelength ; if not existing the submit will fail
+  - source: rruf.py
+    product:
+      nb: products/rruf.ipynb
+    params:
+      rruf_folder: "D:\\nina\\DATA\\RRUF"
+  
