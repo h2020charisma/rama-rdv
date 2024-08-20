@@ -13,9 +13,9 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from ramanchada2.protocols.calibration import CalibrationModel
 import numpy as np
-from  pynanomapper.datamodel.nexus_writer import to_nexus
-from  pynanomapper.datamodel.nexus_spectra import spe2ambit
-from  pynanomapper.datamodel.ambit import Substances,SubstanceRecord,CompositionEntry,Component, Compound
+from  pyambit.nexus_writer import to_nexus
+from  pyambit.nexus_spectra import spe2ambit
+from  pyambit.datamodel import Substances,SubstanceRecord,CompositionEntry,Component, Compound
 import nexusformat.nexus.tree as nx
 
 

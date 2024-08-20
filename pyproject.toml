@@ -30,6 +30,7 @@ hnswlib = "^0.8.0"
 dependency-injector = "^4.41.0"
 python-keycloak = "^4.2.2"
 numcompress = "^0.1.2"
+pyambit = {git = "https://github.com/ideaconsult/pyambit.git"}
 
 
 [build-system]

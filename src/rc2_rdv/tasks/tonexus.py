@@ -2,6 +2,10 @@
 upstream = ["read_metadata"]
 product = None
 input4import = None
+provider: None
+instrument: None
+wavelength: None
+investigation: None
 
 # -
 
@@ -9,24 +13,22 @@ import pandas as pd
 import os.path
 from ramanchada2 import spectrum
 import matplotlib.pyplot as plt
-from pynanomapper.datamodel.nexus_spectra import configure_papp, spe2effect
-import pynanomapper.datamodel.ambit as mx
+from pyambit.nexus_spectra import configure_papp, spe2effect
+import pyambit.datamodel as mx
 import numpy as np
 from typing import Dict, Optional, Union, List
 import nexusformat.nexus.tree as nx
 import os 
-from pynanomapper.datamodel.nexus_writer import to_nexus
+from pyambit.nexus_writer import to_nexus
 import uuid
+from pathlib import Path
 
 prefix="CHRM"
 def create_papp(folder,basename,tags):
     sample = tags[0]
     instrument = tags[1]
-    wavelength = None
-    provider = folder
     sample_provider = folder
-    investigation = folder
-    print(folder)
+
 
     papp =  mx.ProtocolApplication(protocol=mx.Protocol(topcategory="P-CHEM",
         category=mx.EndpointCategory(code="ANALYTICAL_METHODS_SECTION")),effects=[])
@@ -84,7 +86,14 @@ for folder, group_df in grouped:
                     file = os.path.join(_tmp.iloc[0]["folder"], f"{_tmp.iloc[0]['basename']}{_tmp.iloc[0]['extension']}")
                     spe = spectrum.from_local_file(file)
                     spe.plot(label=basename, ax=ax)
-                    papp.effects.append(spe2effect(spe.x,spe.y))
+
+                    data_dict: Dict[str, mx.ValueArray] = {
+                        'x': mx.ValueArray(values = spe.x, unit="cm-1")
+                    }
+                    e = mx.EffectArray(endpoint=_tmp.iloc[0]['basename'],endpointtype="RAW_DATA",
+                                                    signal = mx.ValueArray(values = spe.y,unit="a.u."),
+                                                    axes = data_dict)                    
+                    papp.effects.append(e)
                     break
                 except Exception as err:
                     print(err)
@@ -95,16 +104,16 @@ for folder, group_df in grouped:
     plt.show()
     plt.close()  # Close the plot to release resources
     
-substance_records = []    
+Path(product["nexus"]).mkdir(parents=True, exist_ok=True)
 for tag in papps:
+    substance_records = []    
     substance = mx.SubstanceRecord(name=tag,publicname=tag,ownerName="CHARISMA")
     substance.i5uuid  = "{}-{}".format(prefix,uuid.uuid5(uuid.NAMESPACE_OID,tag))       
     substance.study = papps[tag]["study"]
     substance_records.append(substance)
-
-substances = mx.Substances(substance=substance_records)    
-substances
-
-nxroot = nx.NXroot()
-substances.to_nexus(nxroot)
-nxroot.save(product["nexus"],mode="w")    
+    substances = mx.Substances(substance=substance_records)    
+    nxroot = nx.NXroot()
+    substances.to_nexus(nxroot)
+    file = os.path.join(product["nexus"],"spectra_{}.nxs".format(tag))
+    print(file)
+    nxroot.save(file,mode="w")    
