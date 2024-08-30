@@ -126,6 +126,8 @@ def main(h5service = Provide[Container.h5service] ):
                     print(relative_path.as_posix())
                     with h5service.File(_output,mode="w") as fout:
                         recursive_copy(fin,fout,0)
+                        #otherwise local file path is visible
+                        fout.attrs["file_name"] = relative_path.as_posix()
 
 
     except Exception as err:
