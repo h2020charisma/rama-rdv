@@ -8,7 +8,7 @@ keycloak_client_id = None
 keycloak_realm_name = None
 hs_username = None
 hs_password = None
-nexus_file2import = None
+nexus_folder2import = None
 # -
 
 
@@ -25,7 +25,7 @@ from pynanomapper.clients.authservice import TokenService
 from pynanomapper.clients.service_charisma import H5Service
 
 import h5py
-import time
+from pathlib import Path
 
 # Set up basic configuration for logging to a file
 logger = logging.getLogger('nexus_upload')
@@ -61,29 +61,18 @@ class Container(containers.DeclarativeContainer):
     )
 
 
-def recursive_copy(h5service,src_group, dst_group,level=0):
+def recursive_copy(src_group, dst_group,level=0):
     
     # Copy attributes of the current group
     for attr_name, attr_value in src_group.attrs.items():
         dst_group.attrs[attr_name] = attr_value    
     for index,key in enumerate(src_group):
-        if level==0:
-            logger.info(key)
-            _diff = h5service.tokenservice.token_time_left()
-            logger.info("Token to expire {}".format(_diff))
-            if _diff < 180:
-                logger.info("Refresh token")
-                h5service.tokenservice.refresh_token() 
-                logger.info(h5service.tokenservice.token)
-                _diff = h5service.tokenservice.token_time_left()
-                logger.info("Token to expire {}".format(_diff))
- 
         try:
             item = src_group[key]
             if isinstance(item, h5py.Group):
                 # Create the group in the destination file
                 new_group = dst_group.create_group(key)
-                recursive_copy(h5service, item, new_group,level+1)
+                recursive_copy(item, new_group,level+1)
             elif isinstance(item, h5py.Dataset):
                 if item.shape == ():  # Scalar dataset
                     # Copy the scalar value directly
@@ -105,18 +94,39 @@ def main(h5service = Provide[Container.h5service] ):
     
     h5service.login(hs_username,hs_password)
     try:
-        print(nexus_file2import)
-        with h5py.File(nexus_file2import,'r') as fin:
-            _output = os.path.basename(nexus_file2import)
-            with h5service.File("/{}/{}".format(domain,_output),mode="w") as fout:
-                _diff = h5service.tokenservice.token_time_left()
-                logger.info("Token to expire {}".format(_diff))
-                h5service.tokenservice.refresh_token() 
-                _diff = h5service.tokenservice.token_time_left()
-                logger.info("Token to expire {}".format(_diff))
-                recursive_copy(h5service,fin,fout,0)
+        print(nexus_folder2import)
+        #with h5py.File(nexus_file2import,'r') as fin:
+        #    _output = os.path.basename(nexus_file2import)
+        #    with h5service.File("/{}/{}".format(domain,_output),mode="w") as fout:
+        #        _diff = h5service.tokenservice.token_time_left()
+        #        logger.info("Token to expire {}".format(_diff))
+        #        h5service.tokenservice.refresh_token() 
+        #        _diff = h5service.tokenservice.token_time_left()
+        #        logger.info("Token to expire {}".format(_diff))
+        #        recursive_copy(h5service,fin,fout,0)
 
- 
+        path = Path(nexus_folder2import)
+        for item in path.rglob('*'):
+            relative_path = item.relative_to(path)
+            absolute_path = item.resolve() 
+
+            _diff = h5service.tokenservice.token_time_left()
+            if _diff < 180:
+                logger.info("Refresh token")
+                h5service.tokenservice.refresh_token() 
+                logger.info(h5service.tokenservice.token)
+            else:
+                logger.info("Token to expire {}".format(_diff))
+
+            if item.is_dir():
+                h5service.check_folder(domain="/{}/{}/".format(domain,relative_path),create=True)
+            elif item.name.endswith(".nxs"):
+                with h5py.File(absolute_path,'r') as fin:
+                    _output = "/{}/{}".format(domain,relative_path.as_posix())
+                    print(relative_path.as_posix())
+                    with h5service.File(_output,mode="w") as fout:
+                        recursive_copy(fin,fout,0)
+
 
     except Exception as err:
         print(traceback.format_exc())

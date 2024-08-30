@@ -44,12 +44,15 @@ def delete_folder(h5service,domain,remove_files=False):
             n = _folder._getSubdomains()
             if n>0:
                 for item in _folder._subdomains:
-                    if item["class"] == "folder":
-                        delete_folder(h5service,"{}/".format(item["name"]),remove_files)
-                    elif item["class"] == "domain":
-                        if remove_files:
-                            base_name = os.path.basename(item["name"])    
-                            del _folder[base_name]
+                    try:
+                        if item["class"] == "folder":
+                            delete_folder(h5service,"{}/".format(item["name"]),remove_files)
+                        elif item["class"] == "domain":
+                            if remove_files:
+                                base_name = os.path.basename(item["name"])    
+                                del _folder[base_name]
+                    except Exception as err:
+                        print(err)
         
         try:
             if dparent == '//':

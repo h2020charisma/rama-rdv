@@ -12,7 +12,7 @@ tasks:
       keycloak_realm_name: "{{keycloak_realm_name}}"
       hs_username: "{{hs_username}}"
       hs_password: "{{hs_password}}"
-      nexus_file2import: "{{nexus_file2import}}"      
+      nexus_folder2import: "{{nexus_folder2import}}"      
 
   - source: createinvestigation.py
     product:
