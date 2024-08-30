@@ -1,0 +1,41 @@
+tasks:
+
+  - source: nexus_upload.py
+    product:
+      nb: products/nexus_upload.ipynb
+      data: products/nexus_upload.log
+    params:
+      hs_endpoint: "{{hs_endpoint}}"
+      domain: "{{hsds_investigation}}"
+      keycloak_server_url: "{{keycloak_server_url}}"
+      keycloak_client_id: "{{keycloak_client_id}}"
+      keycloak_realm_name: "{{keycloak_realm_name}}"
+      hs_username: "{{hs_username}}"
+      hs_password: "{{hs_password}}"
+      nexus_file2import: "{{nexus_file2import}}"      
+
+  - source: createinvestigation.py
+    product:
+      nb: products/createinvestigation.ipynb
+    params:
+      hsds_investigation: "{{hsds_investigation}}"
+      keycloak_server_url: "{{keycloak_server_url}}"
+      keycloak_client_id: "{{keycloak_client_id}}"
+      keycloak_realm_name: "{{keycloak_realm_name}}"
+      hs_admin_username: "{{hs_admin}}"
+      hs_admin_password: "{{hs_adminpassword}}"
+
+  - source: auth.py
+    product:
+      nb: products/auth.ipynb
+      domains: products/domains.json
+    params:
+      keycloak_server_url: "{{keycloak_server_url}}"
+      keycloak_client_id: "{{keycloak_client_id}}"
+      keycloak_realm_name: "{{keycloak_realm_name}}"
+      hs_username: "{{hs_username}}"
+      hs_password: "{{hs_password}}"
+      hs_endpoint: "{{hs_endpoint}}"
+      ramandb_api: "{{ramandb_api}}"      
+
+
