@@ -95,16 +95,6 @@ def main(h5service = Provide[Container.h5service] ):
     h5service.login(hs_username,hs_password)
     try:
         print(nexus_folder2import)
-        #with h5py.File(nexus_file2import,'r') as fin:
-        #    _output = os.path.basename(nexus_file2import)
-        #    with h5service.File("/{}/{}".format(domain,_output),mode="w") as fout:
-        #        _diff = h5service.tokenservice.token_time_left()
-        #        logger.info("Token to expire {}".format(_diff))
-        #        h5service.tokenservice.refresh_token() 
-        #        _diff = h5service.tokenservice.token_time_left()
-        #        logger.info("Token to expire {}".format(_diff))
-        #        recursive_copy(h5service,fin,fout,0)
-
         path = Path(nexus_folder2import)
         for item in path.rglob('*'):
             relative_path = item.relative_to(path)
