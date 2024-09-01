@@ -17,9 +17,9 @@ tasks:
   - source: nexus_index.py
     product:
       nb: products/nexus_index.ipynb
-      data: products/nexus_index.log
-      solr_index: products/nexus_index.json
-      ambit_json: products/ambit_json.json
+      data: "products/{{hsds_investigation}}.log"
+      solr_index: "products/{{hsds_investigation}}_solr.json"
+      ambit_json: "products/{{hsds_investigation}}_ambit.json"
     params:
       domain: "{{hsds_investigation}}"
       nexus_folder2import: "{{nexus_folder2import}}"      
