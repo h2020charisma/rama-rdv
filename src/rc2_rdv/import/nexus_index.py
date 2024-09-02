@@ -1,0 +1,161 @@
+# + tags=["parameters"]
+upstream = []
+product = None
+domain = None
+nexus_folder2import = None
+# -
+
+
+import logging
+import traceback
+from pathlib import Path
+from pyambit.solr_writer import Ambit2Solr
+from pyambit.nexus_parser import Nexus2Ambit
+from typing import Dict
+from pyambit.datamodel import Substances, EffectRecord, EffectResult, EffectArray, ValueArray, SubstanceRecord
+import nexusformat.nexus as nx
+import ramanchada2 as rc2 
+import numpy as np
+import scipy.stats as stats
+import numpy.typing as npt
+import os
+
+# Set up basic configuration for logging to a file
+logger = logging.getLogger('nexus_index')
+# Set the level of the logger
+logger.setLevel(logging.DEBUG)
+# Create a file handler with 'w' mode to overwrite the file each time
+file_handler = logging.FileHandler(product["data"], mode='w')
+# Create a formatter and set it for the handler
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+# Add the file handler to the logger
+# Ensure no console handlers are attached
+logger.handlers.clear()
+logger.addHandler(file_handler)
+
+
+class Spectra2Ambit(Nexus2Ambit):
+        
+    def __init__(self,domain : str, index_only : bool = True, dim = 2048, xoffset=140):
+        super().__init__(domain, index_only)
+        self.dim = dim
+        self.xoffset = xoffset
+        self.x4search = np.linspace(xoffset,3*1024+xoffset,num=self.dim)
+
+    @staticmethod
+    def resample(spe :  rc2.spectrum.Spectrum, x4search : npt.NDArray):
+        (spe,hist_dist,index) = Spectra2Ambit.spectra2dist(spe,xcrop = [x4search[0],x4search[-1]])
+        spe_dist_resampled = np.zeros_like(x4search)
+        within_range = (x4search >= min(spe.x)) & (x4search <= max(spe.x))
+        spe_dist_resampled[within_range] =  hist_dist.pdf(x4search[within_range])    
+        return spe_dist_resampled
+
+    @staticmethod
+    def spectra2dist(spe,xcrop = None):
+        #no need to normalize, we'll generate probability distribution, it will self normalize!
+        counts = spe.y # a spectrum is essentially a histogram :)
+        x = spe.x
+        #crop
+        xcrop_right = max(x) if xcrop is None else xcrop[1]
+        xcrop_left = 100 if xcrop is None else xcrop[0]
+        index = np.where((x>=xcrop_left) & (x<=xcrop_right))
+        index = index[0]
+        x = x[index]
+        counts = counts[index]
+        bins =  np.concatenate((
+            [(3*x[0] - x[1])/2],
+            (x[1:] + x[:-1])/2,
+            [(3*x[-1] - x[-2])/2]
+        ))
+        #and now derive a probability distribution, from which we are going to sample
+        hist_dist = stats.rv_histogram((counts,bins))
+        return (spe,hist_dist,index)
+
+    def parse_effect(self, endpointtype_name, data : nx.NXentry, relative_path : str) -> EffectRecord:
+        if self.index_only:
+            spe = rc2.spectrum.Spectrum(x = data.nxaxes[1].nxdata,y= np.mean(data.nxsignal.nxdata, axis=0))
+            y_resampled = Spectra2Ambit.resample(spe,self.x4search)
+            #print(len(y_resampled),type(y_resampled))
+            return EffectArray(
+                    endpoint="spectrum_p1024",
+                    endpointtype="embeddings",
+                    conditions={
+                    },
+                    result=EffectResult(
+                            textValue="{}/{}#{}".format(self.domain,relative_path,data.nxpath)
+                    ),                    
+                    signal=ValueArray(
+                        unit="units",
+                        values=y_resampled,
+                        errQualifier="Error",
+                        errorValue=None,
+                        auxiliary={"spectrum_c1024": y_resampled },
+                    ),
+                    axes={
+                        "x": ValueArray(
+                            unit="cm-1", values=self.x4search, errQualifier="Error_x"
+                        )
+                    },
+                    axis_groups=None,
+                    idresult=None,
+                    endpointGroup=None,
+                    endpointSynonyms=[],
+                    sampleID=None,
+                )            
+        else:
+            raise NotImplementedError("Not implemented")          
+        
+class Spectra2Solr(Ambit2Solr):
+
+    def effectrecord2solr(self,effect: EffectRecord, solr_index = None ):
+        if solr_index is None:
+            solr_index = {}            
+        if isinstance(effect,EffectArray):
+            # tbd - this is new in pyambit, we did not have array results implementation            
+            if effect.result is not None:  #EffectResult
+                self.effectresult2solr(effect.result,solr_index)
+            # e.g. vector search                
+            if effect.endpointtype == "embeddings":
+                solr_index[effect.endpoint] = effect.signal.values.tolist()
+                for aux in effect.signal.auxiliary:
+                    solr_index[aux] = effect.signal.auxiliary[aux].tolist()
+        elif isinstance(effect,EffectRecord):
+            #conditions
+            if effect.result is not None:  #EffectResult
+                self.effectresult2solr(effect.result,solr_index)        
+
+def main():
+    try:
+        path = Path(nexus_folder2import)
+        parser : Spectra2Ambit = Spectra2Ambit(domain="/{}".format(domain),index_only=True)        
+        for item in path.rglob('*.nxs'):
+            relative_path = item.relative_to(path)
+            absolute_path = item.resolve() 
+            if item.is_dir():
+                pass
+            elif item.name.endswith(".nxs"):
+                try:
+                    absolute_path = item.resolve() 
+                    nexus_file = nx.nxload(absolute_path)
+                    parser.parse(nexus_file,relative_path.as_posix())
+                except Exception as err:
+                    print(item,err)
+            #break
+        substances : Substances = parser.get_substances()    
+
+        if os.path.exists(product["solr_index"]):
+            os.remove(product["solr_index"])
+        with Spectra2Solr(prefix="CRMA") as writer:
+            writer.write(substances, product["solr_index"])
+
+        #ambit_json = substances.model_dump_json(exclude_none=True,indent=4)
+        #with open(product["ambit_json"], 'w') as file:
+        #    file.write(ambit_json) 
+    except Exception as err:
+        print(err)
+
+main()        
+
+file_handler.flush()
+file_handler.close()
