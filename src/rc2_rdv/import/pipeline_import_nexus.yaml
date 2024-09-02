@@ -19,7 +19,7 @@ tasks:
       nb: products/nexus_index.ipynb
       data: "products/{{hsds_investigation}}.log"
       solr_index: "products/{{hsds_investigation}}_solr.json"
-      ambit_json: "products/{{hsds_investigation}}_ambit.json"
+      #ambit_json: "products/{{hsds_investigation}}_ambit.json"
     params:
       domain: "{{hsds_investigation}}"
       nexus_folder2import: "{{nexus_folder2import}}"      
@@ -48,4 +48,9 @@ tasks:
       hs_endpoint: "{{hs_endpoint}}"
       ramandb_api: "{{ramandb_api}}"      
 
-
+  - source: nexus_analyze.py
+    product:
+      nb: products/nexus_analyze.ipynb
+    params:
+      domain: "{{hsds_investigation}}"
+      nexus_folder2import: "{{nexus_folder2import}}" 
