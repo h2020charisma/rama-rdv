@@ -83,9 +83,9 @@ class Spectra2Ambit(Nexus2Ambit):
         else:
             spe_transformed = spe_nospikes
 
-        kwargs = {"niter" : 40 }
-        spe_transformed = spe_transformed.subtract_baseline_rc1_snip(**kwargs)  
-        spe_transformed.plot(ax=axs[0],label = "SNIP baseline")
+        #kwargs = {"niter" : 40 }
+        #spe_transformed = spe_transformed.subtract_baseline_rc1_snip(**kwargs)  
+        #spe_transformed.plot(ax=axs[0],label = "SNIP baseline")
 
         try:
             _newdim = np.round(2  * len(spe_transformed.x))
@@ -115,10 +115,11 @@ class Spectra2Ambit(Nexus2Ambit):
         sim = cosine_similarity([spe_spline], [spe_dist_resampled])
         rc2.spectrum.Spectrum(x=self.x4search,y=spe_dist_resampled).plot(ax=axs[2],label = "rv_histogram", linestyle='--')
 
+        dft_sim = cosine_similarity([spe_spline], [spe_resampled])
         
 
         axs[0].set_title('Original')
-        axs[1].set_title('NUDFT')
+        axs[1].set_title('NuDFT cosine[CubicSpline,NuDFT]={:.3f}'.dft_sim(sim[0][0]))
         axs[2].set_title('cosine[CubicSpline,stats.rv_histogram]={:.3f}'.format(sim[0][0]))
         return result
 
