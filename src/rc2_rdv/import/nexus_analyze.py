@@ -69,8 +69,13 @@ class Spectra2Ambit(Nexus2Ambit):
         x_range=(min(self.x4search), max(self.x4search))
         spe_trimmed = spe.trim_axes(method='x-axis',boundaries=x_range)
         spe_trimmed.plot(ax=axs[0],label = "trimmed")
-        spe_nospikes = spe_trimmed.drop_spikes()
-        spe_nospikes.plot(ax=axs[0],label = "no spikes")
+
+        try:
+            spe_nospikes = spe_trimmed.drop_spikes()
+            spe_nospikes.plot(ax=axs[0],label = "no spikes")
+        except Exception as err:
+            spe_nospikes = spe_trimmed
+            print(err)
 
         if np.min(spe_nospikes.y) > 0:
             spe_transformed = rc2.spectrum.Spectrum(x=spe_nospikes.x, y = spe_nospikes.y - np.min(spe_nospikes.y))
@@ -100,18 +105,21 @@ class Spectra2Ambit(Nexus2Ambit):
         within_range = (self.x4search >= xmin) & (self.x4search <= xmax)
         spe_spline[within_range] = spline(self.x4search[within_range])
         l2_norm = np.linalg.norm(spe_spline)
-
-        rc2.spectrum.Spectrum(x=self.x4search,y=spe_spline/l2_norm).plot(ax=axs[2],label = "spline")
+        spe_spline = spe_spline /l2_norm
+        rc2.spectrum.Spectrum(x=self.x4search,y=spe_spline).plot(ax=axs[2],label = "spline")
 
        
         spe_dist_resampled = Spectra2Ambit.resample(spe_transformed,self.x4search)
         l2_norm = np.linalg.norm(spe_dist_resampled)
-        rc2.spectrum.Spectrum(x=self.x4search,y=spe_dist_resampled/l2_norm).plot(ax=axs[2],label = "rv_histogram", linestyle='--')
+        spe_dist_resampled = spe_dist_resampled /l2_norm
+        sim = cosine_similarity([spe_spline], [spe_dist_resampled])
+        rc2.spectrum.Spectrum(x=self.x4search,y=spe_dist_resampled).plot(ax=axs[2],label = "rv_histogram", linestyle='--')
 
+        
 
         axs[0].set_title('Original')
         axs[1].set_title('NUDFT')
-        axs[2].set_title('CubicSpline & stats.rv_histogram')
+        axs[2].set_title('cosine[CubicSpline,stats.rv_histogram]={:.3f}'.format(sim[0][0]))
         return result
 
 
