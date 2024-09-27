@@ -19,6 +19,7 @@ import numpy as np
 import scipy.stats as stats
 import numpy.typing as npt
 import os
+from scipy.interpolate import Akima1DInterpolator
 
 # Set up basic configuration for logging to a file
 logger = logging.getLogger('nexus_index')
@@ -44,12 +45,34 @@ class Spectra2Ambit(Nexus2Ambit):
         self.x4search = np.linspace(xoffset,3*1024+xoffset,num=self.dim)
 
     @staticmethod
-    def resample(spe :  rc2.spectrum.Spectrum, x4search : npt.NDArray):
+    def resample_hist(spe :  rc2.spectrum.Spectrum, x4search : npt.NDArray):
         (spe,hist_dist,index) = Spectra2Ambit.spectra2dist(spe,xcrop = [x4search[0],x4search[-1]])
         spe_dist_resampled = np.zeros_like(x4search)
         within_range = (x4search >= min(spe.x)) & (x4search <= max(spe.x))
         spe_dist_resampled[within_range] =  hist_dist.pdf(x4search[within_range])    
         return spe_dist_resampled
+    
+    @staticmethod
+    def resample_spline(spe :  rc2.spectrum.Spectrum, x4search : npt.NDArray):
+  
+        spline = Akima1DInterpolator(spe.x, spe.y)
+        spe_spline = np.zeros_like(x4search)
+        xmin, xmax = spe.x.min(), spe.x.max()
+        within_range = (x4search >= xmin) & (x4search <= xmax)
+        spe_spline[within_range] = spline(x4search[within_range])
+        return rc2.spectrum.Spectrum(x=spe.x, y = spe_spline)
+
+    @staticmethod
+    def preprocess(spe :  rc2.spectrum.Spectrum, x4search : npt.NDArray, baseline = True):
+        spe_nopedestal = rc2.spectrum.Spectrum(x=spe.x, y = spe.y - np.min(spe.y))
+        spe_resampled = Spectra2Ambit.resample_spline(spe_nopedestal,x4search)
+        # baseline 
+        if baseline:
+            spe_resampled = spe_resampled.subtract_baseline_rc1_snip(niter = 40)  
+        # L2 norm for searching
+        l2_norm = np.linalg.norm(spe_resampled.y)
+
+        return rc2.spectrum.Spectrum(x4search,spe_resampled.y / l2_norm)
 
     @staticmethod
     def spectra2dist(spe,xcrop = None):
@@ -75,7 +98,7 @@ class Spectra2Ambit(Nexus2Ambit):
     def parse_effect(self, endpointtype_name, data : nx.NXentry, relative_path : str) -> EffectRecord:
         if self.index_only:
             spe = rc2.spectrum.Spectrum(x = data.nxaxes[1].nxdata,y= np.mean(data.nxsignal.nxdata, axis=0))
-            y_resampled = Spectra2Ambit.resample(spe,self.x4search)
+            spe_resampled = Spectra2Ambit.preprocess(spe,self.x4search)
             #print(len(y_resampled),type(y_resampled))
             return EffectArray(
                     endpoint="spectrum_p1024",
@@ -87,10 +110,10 @@ class Spectra2Ambit(Nexus2Ambit):
                     ),                    
                     signal=ValueArray(
                         unit="units",
-                        values=y_resampled,
+                        values=spe_resampled.y,
                         errQualifier="Error",
                         errorValue=None,
-                        auxiliary={"spectrum_c1024": y_resampled },
+                        auxiliary={"spectrum_c1024": spe_resampled.y },
                     ),
                     axes={
                         "x": ValueArray(
@@ -118,18 +141,19 @@ class Spectra2Solr(Ambit2Solr):
             # e.g. vector search                
             if effect.endpointtype == "embeddings":
                 solr_index[effect.endpoint] = effect.signal.values.tolist()
-                for aux in effect.signal.auxiliary:
-                    solr_index[aux] = effect.signal.auxiliary[aux].tolist()
+                if effect.signal.auxiliary is not None:
+                    for aux in effect.signal.auxiliary:
+                        solr_index[aux] = effect.signal.auxiliary[aux].tolist()
         elif isinstance(effect,EffectRecord):
             #conditions
             if effect.result is not None:  #EffectResult
                 self.effectresult2solr(effect.result,solr_index)        
 
 def main():
-    try:
-        path = Path(nexus_folder2import)
-        parser : Spectra2Ambit = Spectra2Ambit(domain="/{}".format(domain),index_only=True)        
-        for item in path.rglob('*.nxs'):
+    path = Path(nexus_folder2import)
+    parser : Spectra2Ambit = Spectra2Ambit(domain="/{}".format(domain),index_only=True)        
+    for item in path.rglob('*.nxs'):
+        try:
             relative_path = item.relative_to(path)
             absolute_path = item.resolve() 
             if item.is_dir():
@@ -141,7 +165,10 @@ def main():
                     parser.parse(nexus_file,relative_path.as_posix())
                 except Exception as err:
                     print(item,err)
-            #break
+        except Exception as err:
+            print(item,traceback.format_exc())
+    
+    try: 
         substances : Substances = parser.get_substances()    
 
         if os.path.exists(product["solr_index"]):
@@ -153,7 +180,8 @@ def main():
         #with open(product["ambit_json"], 'w') as file:
         #    file.write(ambit_json) 
     except Exception as err:
-        print(err)
+        print(traceback.format_exc())
+
 
 main()        
 

@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy.typing as npt
 import scipy.stats as stats
-from scipy.interpolate import CubicSpline
+from scipy.interpolate import CubicSpline,Akima1DInterpolator
 import traceback
 
 class Spectra2Ambit(Nexus2Ambit):
@@ -34,9 +34,12 @@ class Spectra2Ambit(Nexus2Ambit):
     def resample(spe :  rc2.spectrum.Spectrum, x4search : npt.NDArray):
         (spe,hist_dist,index) = Spectra2Ambit.spectra2dist(spe,xcrop = [x4search[0],x4search[-1]])
         spe_dist_resampled = np.zeros_like(x4search)
+        cdf = np.zeros_like(x4search)
         within_range = (x4search >= min(spe.x)) & (x4search <= max(spe.x))
         spe_dist_resampled[within_range] =  hist_dist.pdf(x4search[within_range])    
-        return spe_dist_resampled
+        cdf[within_range] =  hist_dist.cdf(x4search[within_range])    
+        cdf[x4search > max(spe.x)] = 1
+        return spe_dist_resampled,cdf
 
     @staticmethod
     def spectra2dist(spe,xcrop = None):
@@ -64,19 +67,20 @@ class Spectra2Ambit(Nexus2Ambit):
         spe = rc2.spectrum.Spectrum(x = data.nxaxes[1].nxdata,y= np.mean(data.nxsignal.nxdata, axis=0))
         #how to set y_err
         #spe.y_err= np.std(data.nxsignal.nxdata, axis=0)
-        fig, axs = plt.subplots(1, 3, figsize=(15, 4))  
+        fig, axs = plt.subplots(4,1, figsize=(30,12))  
         spe.plot(ax=axs[0],label = relative_path)
         x_range=(min(self.x4search), max(self.x4search))
         spe_trimmed = spe.trim_axes(method='x-axis',boundaries=x_range)
         spe_trimmed.plot(ax=axs[0],label = "trimmed")
 
         try:
-            spe_nospikes = spe_trimmed.drop_spikes()
-            spe_nospikes.plot(ax=axs[0],label = "no spikes")
+            spe_nospikes = spe_trimmed.recover_spikes()
+            spe_nospikes.plot(ax=axs[0],label = "recover spikes")
         except Exception as err:
             spe_nospikes = spe_trimmed
             print(err)
 
+        spe_nospikes = spe_trimmed
         if np.min(spe_nospikes.y) > 0:
             spe_transformed = rc2.spectrum.Spectrum(x=spe_nospikes.x, y = spe_nospikes.y - np.min(spe_nospikes.y))
             spe_transformed.plot(ax=axs[0],label = "no pedestal")
@@ -91,14 +95,14 @@ class Spectra2Ambit(Nexus2Ambit):
             _newdim = np.round(2  * len(spe_transformed.x))
         
             spe_resampled = spe_transformed.resample_NUDFT_filter(xnew_bins=_newdim, x_range=x_range)
-            spe_resampled.plot(ax=axs[1],label = "2. len/dim={:.4f} len={}".format(len(spe_transformed.x)/(_newdim), len(spe_transformed.x)))
+            spe_resampled.plot(ax=axs[1],label = "1. len/dim={:.4f} len={}".format(len(spe_transformed.x)/(_newdim), len(spe_transformed.x)))
             spe_resampled = spe_resampled.resample_NUDFT_filter(xnew_bins=self.dim, x_range=x_range)
             spe_resampled.plot(ax=axs[1],label = "2. len/dim={:.4f}".format(_newdim/self.dim),linestyle='--')
         except Exception as err:
             print(err)
 
 
-        spline = CubicSpline(spe_transformed.x, spe_transformed.y)
+        spline = Akima1DInterpolator(spe_transformed.x, spe_transformed.y)
         # Step 2: Initialize the array to store the spline values
         spe_spline = np.zeros_like(self.x4search)
         xmin, xmax = spe_transformed.x.min(), spe_transformed.x.max()
@@ -106,21 +110,27 @@ class Spectra2Ambit(Nexus2Ambit):
         spe_spline[within_range] = spline(self.x4search[within_range])
         l2_norm = np.linalg.norm(spe_spline)
         spe_spline = spe_spline /l2_norm
-        rc2.spectrum.Spectrum(x=self.x4search,y=spe_spline).plot(ax=axs[2],label = "spline")
+        spe_spline = rc2.spectrum.Spectrum(x=self.x4search,y=spe_spline)
+        spe_spline.plot(ax=axs[2],label = "spline")
 
        
-        spe_dist_resampled = Spectra2Ambit.resample(spe_transformed,self.x4search)
+        spe_dist_resampled,cdf = Spectra2Ambit.resample(spe_transformed,self.x4search)
         l2_norm = np.linalg.norm(spe_dist_resampled)
         spe_dist_resampled = spe_dist_resampled /l2_norm
-        sim = cosine_similarity([spe_spline], [spe_dist_resampled])
+        sim = cosine_similarity([spe_spline.y], [spe_dist_resampled])
         rc2.spectrum.Spectrum(x=self.x4search,y=spe_dist_resampled).plot(ax=axs[2],label = "rv_histogram", linestyle='--')
 
-        dft_sim = cosine_similarity([spe_spline], [spe_resampled])
-        
 
+        dft_sim = cosine_similarity([spe_spline.y], [spe_resampled.y])
+        
         axs[0].set_title('Original')
-        axs[1].set_title('NuDFT cosine[CubicSpline,NuDFT]={:.3f}'.dft_sim(sim[0][0]))
-        axs[2].set_title('cosine[CubicSpline,stats.rv_histogram]={:.3f}'.format(sim[0][0]))
+        axs[1].set_title('NuDFT cosine[Akima1D,NuDFT]={:.3f}'.format(dft_sim[0][0]))
+        axs[2].set_title('cosine[Akima1D,stats.rv_histogram]={:.3f}'.format(sim[0][0]))
+        #axs[2].set_xlim(520.45-50,520.45+50) 
+        axs[2].set_xlim(1700-200,1700+200) 
+
+        axs[3].plot(self.x4search,cdf)
+               
         return result
 
 
