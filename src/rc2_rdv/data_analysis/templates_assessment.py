@@ -66,10 +66,12 @@ for op in unique_optical_paths:
     tag = pst_tag
     index = 0
     
+    trim_left = 100
     ax[index].set_title(tag)
     tx = ax[index].twinx()
     try:
         spe = from_chada(os.path.join(_path_calibrated,"{}.cha".format(tag)),dataset="/calibrated")
+        spe=spe.trim_axes(method='x-axis',boundaries=(trim_left,3500)) 
         spe.plot(label="{} calibrated".format(tag),ax=tx,color="#FF0000")
         y_copy = np.copy(spe.y)
         y_copy[y_copy < 0] = 0
@@ -86,6 +88,7 @@ for op in unique_optical_paths:
         print(err)
     try:
         spe = from_chada(os.path.join(_path_source,"{}.cha".format(tag)),dataset="/raw")
+        spe=spe.trim_axes(method='x-axis',boundaries=(trim_left,3500))  
         spe.plot(label=tag,ax=ax[index],color="#0000FF",linestyle='--')
             # play with low-pass filter (tapering/windowing function) to avoid getting noisy spectra after resampling
             #spe =  spe.resample_NUDFT_filter(x_range=(100,dim+100), xnew_bins=dim)

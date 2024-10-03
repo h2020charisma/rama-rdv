@@ -92,7 +92,8 @@ for op in unique_optical_paths:
     if os.path.exists(file_path):
         os.remove(file_path)            
     if min(spe_neon.x)<0:
-        spe_neon = spe_neon.trim_axes(method='x-axis',boundaries=(trim_left,max(spe_neon.x)))    
+        spe_neon = spe_neon.trim_axes(method='x-axis',boundaries=(trim_left,max(spe_neon.x)))  
+        print(max(spe_neon.x))  
     spe_neon.write_cha(file_path,dataset = "/raw")
 
     try:
