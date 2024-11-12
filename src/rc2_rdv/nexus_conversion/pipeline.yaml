@@ -1,0 +1,18 @@
+tasks:
+
+  - source: convert2nexus.py
+    product:
+      nb: products/convert2nexus.ipynb
+      nexus: "{{output_folder}}"
+      #substances: "{{output_folder}}/{{spectra_output}}.json"
+    params:
+      root_folder: "{{root_folder}}"
+      template_metadata: "{{template_metadata}}"
+      multidimensional: "{{multidimensional}}"
+
+  - source: substance_index.py
+    product:
+      nb: products/substance_index.ipynb
+      solr_index: "{{solr_index}}"
+      ambit_json: "{{ambit_json}}"
+      

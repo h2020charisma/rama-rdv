@@ -1,0 +1,4 @@
+root_folder: "SpectraForPaper"
+template_metadata: "Template Raman Reporting.xlsx"
+output_folder: "SpectraForPaper/nexus/1D"
+multidimensional: False
