@@ -1,0 +1,31 @@
+meta:
+    extract_upstream: False
+
+tasks:
+  - source: raman_slopp.py
+    name: "raman_slopp_[[dataset]]"
+    upstream: []    
+    product:
+      nb: products/raman_slopp_[[dataset]].ipynb
+      nexus: "D:\\nina\\DATA\\charisma\\[[dataset]]\\nexus"
+    params:
+      input_folder: "D:\\nina\\DATA\\raman\\SLOPP\\SLoPP and SLoPP-E"
+      metadata_file: "SLoPP and SLoPP-E Spectra Itemized_Public.xlsx"
+    grid:
+      dataset: ["SLoPP","SLoPP-E"]
+
+  - source: nexus_index.py
+    name: "nexus_index_[[dataset]]"
+    upstream: ["raman_slopp_*"]    
+    product:
+      nb: products/nexus_index.ipynb
+      data: "products/SLOPP.log"
+      solr_index: "D:\\nina\\DATA\\charisma\\[[dataset]]\\solr_json"
+      plots: "D:\\nina\\DATA\\charisma\\[[dataset]]\\images"
+      #ambit_json: "products/{{hsds_investigation}}_ambit.json"
+    params:
+      domain: "SLOPP"         
+      # nexus_folder2import: "D:\\nina\\DATA\\charisma\\ocean\\nexus"  
+      baseline_remove: False
+    grid:
+      dataset: ["SLoPP","SLoPP-E"]             
