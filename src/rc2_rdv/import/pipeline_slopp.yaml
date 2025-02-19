@@ -31,3 +31,46 @@ tasks:
       prefix: "SLOP"      
     grid:
       dataset: ["SLoPP","SLoPP-E"]             
+
+  - source: auth.py
+    upstream: []
+    product:
+      nb: products/auth.ipynb
+      domains: products/domains.json
+    params:
+      keycloak_server_url: "{{keycloak_server_url}}"
+      keycloak_client_id: "{{keycloak_client_id}}"
+      keycloak_realm_name: "{{keycloak_realm_name}}"
+      hs_username: "{{hs_username}}"
+      hs_password: "{{hs_password}}"
+      hs_endpoint: "{{hs_endpoint}}"
+      ramandb_api: "{{ramandb_api}}"      
+
+  - source: createinvestigation.py
+    upstream: ["auth"]  
+    product:
+      nb: products/createinvestigation.ipynb
+    params:
+      hsds_investigation: "SLOPP"
+      keycloak_server_url: "{{keycloak_server_url}}"
+      keycloak_client_id: "{{keycloak_client_id}}"
+      keycloak_realm_name: "{{keycloak_realm_name}}"
+      hs_admin_username: "{{hs_admin}}"
+      hs_admin_password: "{{hs_adminpassword}}"
+      dry_run: True
+
+  - source: nexus_upload.py
+    name: "nexus_upload_SLOPP"
+    upstream: ["createinvestigation","raman_slopp_*"] 
+    product:
+      nb: products/nexus_upload_SLOPP.ipynb
+      data: products/nexus_upload_SLOPP.log
+    params:
+      hs_endpoint: "{{hs_endpoint}}"
+      domain: "SLOPP"
+      keycloak_server_url: "{{keycloak_server_url}}"
+      keycloak_client_id: "{{keycloak_client_id}}"
+      keycloak_realm_name: "{{keycloak_realm_name}}"
+      hs_username: "{{hs_username}}"
+      hs_password: "{{hs_password}}"
+      dry_run: False

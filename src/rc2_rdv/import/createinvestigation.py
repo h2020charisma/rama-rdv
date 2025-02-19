@@ -1,5 +1,12 @@
+from dependency_injector import containers, providers
+from dependency_injector.wiring import Provide, inject
+from keycloak import KeycloakOpenID
+import json
+from pynanomapper.clients.authservice import TokenService
+from pynanomapper.clients.service_charisma import H5Service
+
+
 # + tags=["parameters"]
-upstream = ["auth"]
 product = None
 hsds_investigation = None
 hs_admin_username = None
@@ -7,15 +14,9 @@ hs_admin_password = None
 keycloak_server_url = None
 keycloak_client_id = None
 keycloak_realm_name = None
+dry_run = None
 # -
 
-from dependency_injector import containers, providers
-from dependency_injector.wiring import Provide, inject
-from keycloak import KeycloakOpenID
-import json
-
-from pynanomapper.clients.authservice import TokenService
-from pynanomapper.clients.service_charisma import H5Service
 
 class Container(containers.DeclarativeContainer):
     kcclient = providers.Singleton(
@@ -27,16 +28,16 @@ class Container(containers.DeclarativeContainer):
     )
     tokenservice = providers.Factory(
         TokenService,
-        kcclient = kcclient
+        kcclient=kcclient
     )
     h5service = providers.Factory(
         H5Service,
-        tokenservice = tokenservice
+        tokenservice=tokenservice
     )
 
 @inject
-def main(ts = Provide[Container.h5service]):
-    ts.login(hs_admin_username,hs_admin_password)
+def main(ts=Provide[Container.h5service]):
+    ts.login(hs_admin_username, hs_admin_password)
     
     with open(upstream["auth"]["domains"], 'r') as json_file:
         tld = json.load(json_file)
@@ -51,7 +52,8 @@ def main(ts = Provide[Container.h5service]):
     except Exception as err:
         try:
             _folder = ts.create_domain(domain)
-            _folder.putACL({'userName': 'g:charisma', 'create': False, 'read': True, 'update': False, 'delete': False, 'readACL': False, 'updateACL': False})
+            _folder.putACL({'userName': 'g:charisma', 'create': False, 
+                            'read': True, 'update': False, 'delete': False, 'readACL': False, 'updateACL': False})
             #https://hsds-kc.ideaconsult.net/domains
             _folder = ts.check_domain(domain)
             print(_folder)
@@ -61,9 +63,11 @@ def main(ts = Provide[Container.h5service]):
         ts.logout()
 
 
-
+# check if upstream["auth"]["domains"] json contains the investigation. 
+# if yes, do not create
 print(__name__)
 container = Container()
 container.init_resources()
 container.wire(modules=[__name__])
-main()
+if not dry_run:
+    main()

@@ -56,7 +56,11 @@ def load(dataset, base_directory):
 #Library ID	Library ID Shortform	Polymer	Colour	Morphology	Source	Source Type	Laser (nm)	Grating 	Hole size (nm)	Slit (um)	Filter (%)	Acq. Time (s)	Accumulation	Delay (s)
     dynamic_column_mapping = {
         "Library ID": "sample",
-        "Laser (nm)": "laser_wl"
+        "Laser (nm)": "laser_wl",
+        "Hole size (nm)": "pin_hole_size",
+        "Acq. Time (s)": "acquisition_time",
+        "Grating ": "grating",
+        "Grating": "grating"
     }
     spe_frame = SpectraFrame.from_dataframe(df, dynamic_column_mapping)
     return spe_frame
@@ -72,7 +76,9 @@ def plot_spectra(df: SpectraFrame, title="spectra", source="spectrum", label="sa
 
 spe_frame = load(dataset, os.path.join(input_folder, dataset))
 # spe_frame["file_name"]
-spe_frame[["sample", "file_name"]].to_excel(f"test_{dataset}.xlsx", index=False)
+spe_frame.to_excel(f"test_{dataset}.xlsx", index=False)
+spe_frame.columns
+
 # .head()
 spe_frame["spectrum"] = spe_frame.apply(load_spectrum, axis=1)
 grouped = spe_frame.groupby("Polymer")
@@ -81,14 +87,23 @@ for Polymer, group in grouped:
     plot_spectra(group, title=Polymer)
     substances = []
     for index, row in group.iterrows():
+        sample_id = row["Library ID Shortform"]
         meta = {}
-        meta["id"] = row["Library ID Shortform"]
-        meta["sample"] = row["sample"]
-        meta["laser_wl"] = row["laser_wl"]
-        substance = mx.SubstanceRecord(name=meta["id"], publicname=meta["sample"],
-                                   ownerName=dataset, substanceType=meta["sample"],
+        for tag in ["pin_hole_size","acquisition_time","grating"]:
+            meta[tag] = row[tag]
+        substance = mx.SubstanceRecord(name=sample_id, publicname=row["sample"],
+                                   ownerName=dataset, substanceType=row["Polymer"],
                                    ownerUUID="{}-{}".format(prefix, uuid.uuid5(uuid.NAMESPACE_OID, dataset)))
-        substance.i5uuid = "{}-{}".format(prefix, uuid.uuid5(uuid.NAMESPACE_OID, meta["id"]))
+        substance.i5uuid = "{}-{}".format(prefix, uuid.uuid5(uuid.NAMESPACE_OID, sample_id))
+        mol = mx.Compound(name=row["sample"])
+        cmp = mx.Component(compound=mol, values={
+            "Polymer": row["Polymer"],
+            "Colour": row["Colour"],
+            "Morphology": row["Morphology"],
+            "Source": row["Source"]
+        })
+        substance.composition = [mx.CompositionEntry(component=cmp)]
+
         print(substance.model_dump_json())
         substance.study = []
         papp = mx.ProtocolApplication(
@@ -100,19 +115,19 @@ for Polymer, group in grouped:
                 effects=[]
                 )
         _investigation = dataset
-        citation =  mx.Citation(
+        citation = mx.Citation(
             owner="10.1021/acs.analchem.9b03626", title=dataset, year=2020)
         configure_papp(
-                papp,  instrument=("", ""),
-                wavelength=str(meta["laser_wl"]),
+                papp,  instrument=("HORIBA", "XploRA PLUS"),
+                wavelength=str(row["laser_wl"]),
                 provider=citation.owner,
-                sample=meta["id"],
+                sample=sample_id,
                 sample_provider=dataset,
                 investigation=_investigation,
                 citation=citation,
                 prefix=prefix,
-                meta={})
-        papp.nx_name = meta["id"]
+                meta=meta)
+        papp.nx_name = sample_id
         spe = row["spectrum"]
         data_dict: Dict[str, mx.ValueArray] = {
             "Wavenumber": mx.ValueArray(values=spe.x, unit="cm¯¹")
@@ -123,7 +138,7 @@ for Polymer, group in grouped:
                 signal=mx.ValueArray(values=spe.y, unit="Arbitr.units."),
                 axes=data_dict
         )
-        ea.nx_name = meta["id"]
+        ea.nx_name = sample_id
         papp.effects.append(ea)
         substance.study.append(papp)
         substances.append(substance)

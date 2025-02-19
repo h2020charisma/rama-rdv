@@ -1,6 +1,11 @@
+import json
+from dependency_injector import containers, providers
+from dependency_injector.wiring import Provide, inject
+from keycloak import KeycloakOpenID
+from pynanomapper.clients.authservice import TokenService, QueryService
+
 # + tags=["parameters"]
 from datetime import date
-upstream = []
 product = None
 hs_endpoint = None
 ramandb_api = None
@@ -11,12 +16,6 @@ keycloak_client_id = None
 keycloak_realm_name = None
 
 # -
-
-import json
-from dependency_injector import containers, providers
-from dependency_injector.wiring import Provide, inject
-from keycloak import KeycloakOpenID
-from pynanomapper.clients.authservice import TokenService, QueryService
 
 class Container(containers.DeclarativeContainer):
     kcclient = providers.Singleton(
