@@ -11,6 +11,7 @@ tasks:
     params:
       input_folder: "D:\\nina\\DATA\\raman\\SLOPP\\SLoPP and SLoPP-E"
       metadata_file: "SLoPP and SLoPP-E Spectra Itemized_Public.xlsx"
+      prefix: "SLOP"
     grid:
       dataset: ["SLoPP","SLoPP-E"]
 
@@ -21,11 +22,12 @@ tasks:
       nb: products/nexus_index.ipynb
       data: "products/SLOPP.log"
       solr_index: "D:\\nina\\DATA\\charisma\\[[dataset]]\\solr_json"
-      plots: "D:\\nina\\DATA\\charisma\\[[dataset]]\\images"
+      # plots: "D:\\nina\\DATA\\charisma\\[[dataset]]\\images"
       #ambit_json: "products/{{hsds_investigation}}_ambit.json"
     params:
       domain: "SLOPP"         
       # nexus_folder2import: "D:\\nina\\DATA\\charisma\\ocean\\nexus"  
       baseline_remove: False
+      prefix: "SLOP"      
     grid:
       dataset: ["SLoPP","SLoPP-E"]             
