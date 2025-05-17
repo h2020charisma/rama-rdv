@@ -4,7 +4,7 @@ Rama Rendez-Vous (ploomber pipelines for Raman processing)
 
 ```python
 cd src
-cd rc_rdv
+cd rc2_rdv
 cd nexus_conversion
 ploomber build
 ```
