@@ -1,0 +1,10 @@
+tasks:
+  - source: tdparse.py
+    name: tdparse-[[dataset]]
+    product:
+      nb: products/tdparse-[[dataset]].ipynb
+      nexus: products/tdparse-[[dataset]].nxs
+    params:
+      config: "{{config}}"
+    grid:
+      dataset: ["ATR_FTIR", "Raman", "PIFM"]
