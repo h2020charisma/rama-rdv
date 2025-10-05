@@ -1,10 +1,29 @@
+meta:
+    extract_upstream: False
+
 tasks:
   - source: tdparse.py
+    upstream: []
     name: tdparse-[[dataset]]
     product:
-      nb: products/tdparse-[[dataset]].ipynb
-      nexus: products/tdparse-[[dataset]].nxs
+      nb: products/tdparse_import/[[dataset]].ipynb
+      nexus: products/tdparse_import/tdparse-[[dataset]].nxs
     params:
       config: "{{config}}"
     grid:
       dataset: ["ATR_FTIR", "Raman", "PIFM"]
+
+
+  - source: nexus_index.py
+    upstream: ["tdparse-*"]      
+    product:
+      nb: "products/tdparse_import/nexus_index.ipynb"
+      data: "products/tdparse_import/import.log"
+      solr_index: "products/tdparse_import/solr_json"
+      plots: "products/tdparse_import/images"
+      #ambit_json: "products/{{hsds_investigation}}_ambit.json"
+    params:
+      domain: "POLYRISK"
+      # nexus_folder2import: "D:\\nina\\DATA\\charisma\\OCEAN_POLYMERS\\nexus"            
+      # nexus_folder2import: "D:\\nina\\DATA\\charisma\\ocean\\nexus"  
+      baseline_remove: False                

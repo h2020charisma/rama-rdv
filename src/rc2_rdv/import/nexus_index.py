@@ -139,7 +139,10 @@ class Spectra2Solr(Ambit2Solr):
 def main(max_substances=1000, nexus_folder2import=None):
     index_part = 1
     path = Path(nexus_folder2import)
-    parser: Spectra2Ambit = Spectra2Ambit(domain="/{}".format(domain), index_only=True)        
+    print(path)
+    parser_nxraman: Spectra2Ambit = Spectra2Ambit(domain="/{}".format(domain), index_only=True)
+    parser_all: Nexus2Ambit = Nexus2Ambit(domain="/{}".format(domain), index_only=True)
+    parser = parser_all
     for item in path.rglob('*.nxs'):
         try:
             relative_path = item.relative_to(path)
@@ -149,6 +152,7 @@ def main(max_substances=1000, nexus_folder2import=None):
             elif item.name.endswith(".nxs"):
                 try:
                     absolute_path = item.resolve()
+                    print(absolute_path)
                     nexus_file = nx.nxload(absolute_path)
                     parser.parse(nexus_file, relative_path.as_posix())
                 except Exception as err:
@@ -157,6 +161,7 @@ def main(max_substances=1000, nexus_folder2import=None):
         except Exception as err:
             print(item, traceback.format_exc())
         nsubstances = len(parser.substances)
+        print(nsubstances, index_part)
         if nsubstances % 5 == 0:
             print(nsubstances)
         if nsubstances > max_substances:
@@ -172,14 +177,25 @@ def main(max_substances=1000, nexus_folder2import=None):
             except Exception as err:
                 print(traceback.format_exc())
             index_part = index_part + 1
-            parser = Spectra2Ambit(domain="/{}".format(domain), index_only=True)
-            break
+            #parser = Spectra2Ambit(domain="/{}".format(domain), index_only=True)
+            parser = Nexus2Ambit(domain="/{}".format(domain), index_only=True)
+
 
 
 if os.path.exists(product["solr_index"]):
+
     shutil.rmtree(product["solr_index"])
 os.mkdir(product["solr_index"])
-nexus_folder2import = upstream["raman_slopp_*"][f"raman_slopp_{dataset}"]["nexus"]
-main(max_substances=100, nexus_folder2import=nexus_folder2import)
+#nexus_folder2import = upstream["raman_slopp_*"][f"raman_slopp_{dataset}"]["nexus"]
+
+nexus_folder2import = None
+for up in upstream:
+    for tag in upstream[up]:
+        nexus = upstream[up][tag]["nexus"]
+        nexus_folder2import = Path(nexus).parent
+        break
+
+main(max_substances=0, nexus_folder2import=nexus_folder2import)
+
 file_handler.flush()
 file_handler.close()
