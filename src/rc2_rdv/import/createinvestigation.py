@@ -8,6 +8,7 @@ from pynanomapper.clients.service_charisma import H5Service
 
 # + tags=["parameters"]
 product = None
+upstream = None
 hsds_investigation = None
 hs_admin_username = None
 hs_admin_password = None
@@ -15,7 +16,12 @@ keycloak_server_url = None
 keycloak_client_id = None
 keycloak_realm_name = None
 dry_run = None
+acl_group = None
 # -
+
+
+if acl_group is None:
+    acl_group = "charisma"
 
 
 class Container(containers.DeclarativeContainer):
@@ -52,7 +58,7 @@ def main(ts=Provide[Container.h5service]):
     except Exception as err:
         try:
             _folder = ts.create_domain(domain)
-            _folder.putACL({'userName': 'g:charisma', 'create': False, 
+            _folder.putACL({'userName': f'g:{acl_group}', 'create': False, 
                             'read': True, 'update': False, 'delete': False, 'readACL': False, 'updateACL': False})
             #https://hsds-kc.ideaconsult.net/domains
             _folder = ts.check_domain(domain)

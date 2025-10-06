@@ -26,4 +26,32 @@ tasks:
       domain: "POLYRISK"
       # nexus_folder2import: "D:\\nina\\DATA\\charisma\\OCEAN_POLYMERS\\nexus"            
       # nexus_folder2import: "D:\\nina\\DATA\\charisma\\ocean\\nexus"  
-      baseline_remove: False                
+      baseline_remove: False
+
+
+  - source: auth.py
+    product:
+      nb: products/tdparse_import/auth.ipynb
+      domains: products/tdparse_import/domains.json
+    params:
+      keycloak_server_url: "{{keycloak_server_url}}"
+      keycloak_client_id: "{{keycloak_client_id}}"
+      keycloak_realm_name: "{{keycloak_realm_name}}"
+      hs_username: "{{hs_username}}"
+      hs_password: "{{hs_password}}"
+      hs_endpoint: "{{hs_endpoint}}"
+      ramandb_api: "{{ramandb_api}}"
+
+
+  - source: createinvestigation.py
+    upstream: ["auth"]  
+    product:
+      nb: products/tdparse_import/createinvestigation.ipynb
+    params:
+      hsds_investigation: "POLYRISK"
+      keycloak_server_url: "{{keycloak_server_url}}"
+      keycloak_client_id: "{{keycloak_client_id}}"
+      keycloak_realm_name: "{{keycloak_realm_name}}"
+      hs_admin_username: "{{hs_admin}}"
+      hs_admin_password: "{{hs_adminpassword}}"
+      acl_group: "polyrisk"

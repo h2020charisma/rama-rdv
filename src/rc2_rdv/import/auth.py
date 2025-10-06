@@ -42,8 +42,9 @@ def main(qs = Provide[Container.queryservice]):
     try:
         qs.login(hs_username,hs_password)
         try:
-            api_metadata = "{}metadata".format(ramandb_api)
-            print(api_metadata)
+            if ramandb_api is not None:
+                api_metadata = "{}metadata".format(ramandb_api)
+                print(api_metadata)
         except Exception as err:
             print(err)
         try:
