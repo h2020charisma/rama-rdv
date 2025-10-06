@@ -23,7 +23,7 @@ tasks:
       # plots: "products/tdparse_import/images"
       #ambit_json: "products/{{hsds_investigation}}_ambit.json"
     params:
-      domain: "POLYRISK"
+      domain: "{{hsds_investigation}}"
       # nexus_folder2import: "D:\\nina\\DATA\\charisma\\OCEAN_POLYMERS\\nexus"            
       # nexus_folder2import: "D:\\nina\\DATA\\charisma\\ocean\\nexus"  
       baseline_remove: False
@@ -48,10 +48,26 @@ tasks:
     product:
       nb: products/tdparse_import/createinvestigation.ipynb
     params:
-      hsds_investigation: "POLYRISK"
+      hsds_investigation: "{{hsds_investigation}}"
       keycloak_server_url: "{{keycloak_server_url}}"
       keycloak_client_id: "{{keycloak_client_id}}"
       keycloak_realm_name: "{{keycloak_realm_name}}"
       hs_admin_username: "{{hs_admin}}"
       hs_admin_password: "{{hs_adminpassword}}"
       acl_group: "polyrisk"
+
+
+  - source: nexus_upload.py
+    upstream: ["createinvestigation", "tdparse-*"]  
+    product:
+      nb: products/tdparse_import/nexus_upload.ipynb
+      data: products/tdparse_import/nexus_upload.log
+    params:
+      hs_endpoint: "{{hs_endpoint}}"
+      domain: "{{hsds_investigation}}"
+      keycloak_server_url: "{{keycloak_server_url}}"
+      keycloak_client_id: "{{keycloak_client_id}}"
+      keycloak_realm_name: "{{keycloak_realm_name}}"
+      hs_username: "{{hs_username}}"
+      hs_password: "{{hs_password}}"
+      nexus_folder2import: "products/tdparse_import/solr_json"         

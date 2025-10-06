@@ -131,9 +131,11 @@ container.init_resources()
 container.wire(modules=[__name__])
 # main()
 
-for key in upstream["raman_slopp_*"]:
-    nexus_folder2import = upstream["raman_slopp_*"][key]["nexus"]
-    main(nexus_folder2import=nexus_folder2import)
+for up in upstream:
+    if up.endswith("*"):
+        for key in upstream[up]:
+            nexus_folder2import = upstream[up][key]["nexus"]
+            main(nexus_folder2import=nexus_folder2import)
 
 file_handler.flush()
 file_handler.close()
