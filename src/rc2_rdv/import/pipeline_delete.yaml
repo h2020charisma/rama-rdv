@@ -1,6 +1,10 @@
+meta:
+    extract_upstream: False
+
 tasks:
 
   - source: delete_investigation.py
+    upstream: ["auth"]  
     product:
       nb: products/delete_investigation.ipynb
     params:
@@ -13,6 +17,7 @@ tasks:
       remove_files: "{{remove_files}}"
 
   - source: auth.py
+    upstream: []
     product:
       nb: products/auth.ipynb
       domains: products/domains.json

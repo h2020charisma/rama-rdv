@@ -87,12 +87,16 @@ def recursive_copy(src_group, dst_group, level=0):
 
 
 @inject
-def main(h5service=Provide[Container.h5service], nexus_folder2import=None):
+def main(h5service=Provide[Container.h5service], nexus_folder2import: Path=None):
     print(nexus_folder2import)
     h5service.login(hs_username,hs_password)
     try:
-        path = Path(nexus_folder2import)
+        path = nexus_folder2import
         for item in path.rglob('*'):
+            # skip items that are neither directories nor .nxs files
+            if not (item.is_dir() or item.suffix == ".nxs"):
+                continue
+            print(item)
             relative_path = item.relative_to(path)
             absolute_path = item.resolve() 
 
@@ -131,11 +135,15 @@ container.init_resources()
 container.wire(modules=[__name__])
 # main()
 
+nexus_folder2import = set([])
 for up in upstream:
     if up.endswith("*"):
         for key in upstream[up]:
-            nexus_folder2import = upstream[up][key]["nexus"]
-            main(nexus_folder2import=nexus_folder2import)
+            nexus_folder2import.add(Path(upstream[up][key]["nexus"]).parent)
+
+print(nexus_folder2import)
+for folder in nexus_folder2import:
+    main(nexus_folder2import=folder)
 
 file_handler.flush()
 file_handler.close()

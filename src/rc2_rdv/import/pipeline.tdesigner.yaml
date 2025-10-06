@@ -7,7 +7,7 @@ tasks:
     name: tdparse-[[dataset]]
     product:
       nb: products/tdparse_import/[[dataset]].ipynb
-      nexus: products/tdparse_import/tdparse-[[dataset]].nxs
+      nexus: products/tdparse_import/nexus/tdparse-[[dataset]].nxs
     params:
       config: "{{config}}"
     grid:
@@ -70,4 +70,5 @@ tasks:
       keycloak_realm_name: "{{keycloak_realm_name}}"
       hs_username: "{{hs_username}}"
       hs_password: "{{hs_password}}"
-      nexus_folder2import: "products/tdparse_import/solr_json"         
+      nexus_folder2import: "products/tdparse_import/solr_json"      
+      dry_run: False   
