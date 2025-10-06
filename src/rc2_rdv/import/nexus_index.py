@@ -69,48 +69,51 @@ class Spectra2Ambit(Nexus2Ambit):
 
         return rc2.spectrum.Spectrum(x4search, spe_resampled.y / l2_norm)
 
-    def parse_effect(self, endpointtype_name, data: nx.NXentry, relative_path: str) -> EffectRecord:
-        if self.index_only:
-            if len(data.nxaxes) == 1:
-                spe = rc2.spectrum.Spectrum(x=data.nxaxes[0].nxdata, y=data.nxsignal.nxdata)
-            else:
-                spe = rc2.spectrum.Spectrum(x=data.nxaxes[1].nxdata, y=np.mean(data.nxsignal.nxdata, axis=0))
-
-            # ax = spe.plot(label="original")
-            spe_resampled = Spectra2Ambit.preprocess(spe, self.x4search, baseline=baseline_remove)
-            # spe_resampled.plot(label="processed",ax=ax.twinx(),color='red')
-            # ax.set_title(relative_path)
-            # plt.savefig(os.path.join(product["plots"],"{}.png".format(relative_path)))
-            _embeddings = None if np.isnan(spe_resampled.y).any() else spe_resampled.y
-            # print(len(y_resampled),type(y_resampled))
-            return EffectArray(
-                    endpoint="spectrum_p1024",
-                    endpointtype="embeddings",
-                    conditions={
-                    },
-                    result=EffectResult(
-                            textValue="{}/{}#{}".format(self.domain, relative_path, data.nxpath)
-                    ),
-                    signal=ValueArray(
-                        unit="units",
-                        values=_embeddings,
-                        errQualifier="Error",
-                        errorValue=None
-                        # auxiliary={"spectrum_c1024": _embeddings },
-                    ),
-                    axes={
-                        "x": ValueArray(
-                            unit="cm-1", values=self.x4search, errQualifier="Error_x"
-                        )
-                    },
-                    axis_groups=None,
-                    idresult=None,
-                    endpointGroup=None,
-                    endpointSynonyms=[],
-                    sampleID=None,
-                )
+    def parse_effect(self, endpointtype_name, data: nx.NXentry, relative_path: str, nxdefinition:str = None) -> EffectRecord:
+        if nxdefinition != "NXraman":
+            return super().parse_effect( endpointtype_name, data, relative_path, nxdefinition)
         else:
-            raise NotImplementedError("Not implemented")
+            if self.index_only:
+                if len(data.nxaxes) == 1:
+                    spe = rc2.spectrum.Spectrum(x=data.nxaxes[0].nxdata, y=data.nxsignal.nxdata)
+                else:
+                    spe = rc2.spectrum.Spectrum(x=data.nxaxes[1].nxdata, y=np.mean(data.nxsignal.nxdata, axis=0))
+
+                # ax = spe.plot(label="original")
+                spe_resampled = Spectra2Ambit.preprocess(spe, self.x4search, baseline=baseline_remove)
+                # spe_resampled.plot(label="processed",ax=ax.twinx(),color='red')
+                # ax.set_title(relative_path)
+                # plt.savefig(os.path.join(product["plots"],"{}.png".format(relative_path)))
+                _embeddings = None if np.isnan(spe_resampled.y).any() else spe_resampled.y
+                # print(len(y_resampled),type(y_resampled))
+                return EffectArray(
+                        endpoint="spectrum_p1024",
+                        endpointtype="embeddings",
+                        conditions={
+                        },
+                        result=EffectResult(
+                                textValue="{}/{}#{}".format(self.domain, relative_path, data.nxpath)
+                        ),
+                        signal=ValueArray(
+                            unit="units",
+                            values=_embeddings,
+                            errQualifier="Error",
+                            errorValue=None
+                            # auxiliary={"spectrum_c1024": _embeddings },
+                        ),
+                        axes={
+                            "x": ValueArray(
+                                unit="cm-1", values=self.x4search, errQualifier="Error_x"
+                            )
+                        },
+                        axis_groups=None,
+                        idresult=None,
+                        endpointGroup=None,
+                        endpointSynonyms=[],
+                        sampleID=None,
+                    )
+            else:
+                raise NotImplementedError("Not implemented")
 
 
 class Spectra2Solr(Ambit2Solr):
@@ -140,9 +143,9 @@ def main(max_substances=1000, nexus_folder2import=None):
     index_part = 1
     path = Path(nexus_folder2import)
     print(path)
-    parser_nxraman: Spectra2Ambit = Spectra2Ambit(domain="/{}".format(domain), index_only=True)
-    parser_all: Nexus2Ambit = Nexus2Ambit(domain="/{}".format(domain), index_only=True)
-    parser = parser_all
+    parser: Spectra2Ambit = Spectra2Ambit(domain="/{}".format(domain), index_only=True)
+    # parser_all: Nexus2Ambit = Nexus2Ambit(domain="/{}".format(domain), index_only=True)
+
     for item in path.rglob('*.nxs'):
         try:
             relative_path = item.relative_to(path)
@@ -167,7 +170,8 @@ def main(max_substances=1000, nexus_folder2import=None):
         if nsubstances > max_substances:
             try:
                 substances: Substances = parser.get_substances()
-
+                for s in substances.substance:
+                    print(s.ownerName)
                 with Spectra2Solr(prefix=prefix) as writer:
                     writer.write(substances, os.path.join(product["solr_index"], "solr_{}.json".format(index_part)))
 
@@ -177,8 +181,8 @@ def main(max_substances=1000, nexus_folder2import=None):
             except Exception as err:
                 print(traceback.format_exc())
             index_part = index_part + 1
-            #parser = Spectra2Ambit(domain="/{}".format(domain), index_only=True)
-            parser = Nexus2Ambit(domain="/{}".format(domain), index_only=True)
+            parser = Spectra2Ambit(domain="/{}".format(domain), index_only=True)
+            # parser = Nexus2Ambit(domain="/{}".format(domain), index_only=True)
 
 
 

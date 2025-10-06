@@ -20,7 +20,7 @@ tasks:
       nb: "products/tdparse_import/nexus_index.ipynb"
       data: "products/tdparse_import/import.log"
       solr_index: "products/tdparse_import/solr_json"
-      plots: "products/tdparse_import/images"
+      # plots: "products/tdparse_import/images"
       #ambit_json: "products/{{hsds_investigation}}_ambit.json"
     params:
       domain: "POLYRISK"

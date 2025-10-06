@@ -31,6 +31,7 @@ for file in cfg["FILES"]:
     else:
         substances.substance.extend(s.substance)
 
+Path(os.path.dirname(product["nexus"])).parent.mkdir(parents=True, exist_ok=True)
 nxroot = nx.NXroot()
 substances.to_nexus(nxroot, hierarchy=False)
 nxroot.save(product["nexus"], mode="w")
