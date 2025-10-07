@@ -17,7 +17,7 @@ tasks:
   - source: nexus_index.py
     upstream: ["tdparse-*"]      
     product:
-      nb: "products/tdparse_import/nexus_index.ipynb"
+      nb: "products/tdparse_import/solr_json/nexus_index.ipynb"
       data: "products/tdparse_import/import.log"
       solr_index: "products/tdparse_import/solr_json"
       # plots: "products/tdparse_import/images"
@@ -72,3 +72,5 @@ tasks:
       hs_password: "{{hs_password}}"
       nexus_folder2import: "products/tdparse_import/solr_json"      
       dry_run: False   
+
+

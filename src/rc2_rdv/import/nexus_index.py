@@ -139,7 +139,7 @@ class Spectra2Solr(Ambit2Solr):
                 self.effectresult2solr(effect.result, solr_index)        
 
 
-def main(max_substances=1000, nexus_folder2import=None):
+def main(max_substances=1000, nexus_folder2import=None, out_folder=None):
     index_part = 1
     path = Path(nexus_folder2import)
     print(path)
@@ -173,23 +173,26 @@ def main(max_substances=1000, nexus_folder2import=None):
                 for s in substances.substance:
                     print(s.ownerName)
                 with Spectra2Solr(prefix=prefix) as writer:
-                    writer.write(substances, os.path.join(product["solr_index"], "solr_{}.json".format(index_part)))
-
-                # ambit_json = substances.model_dump_json(exclude_none=True,indent=4)
-                # with open(product["ambit_json"], 'w') as file:
-                #    file.write(ambit_json) 
-            except Exception as err:
+                    writer.write(substances,
+                                 os.path.join(out_folder, f"solr_{index_part}.json"))
+            except Exception:
                 print(traceback.format_exc())
             index_part = index_part + 1
             parser = Spectra2Ambit(domain="/{}".format(domain), index_only=True)
-            # parser = Nexus2Ambit(domain="/{}".format(domain), index_only=True)
+    # if index_part is still 1, we have not written anything
+    if index_part == 1:
+        substances: Substances = parser.get_substances()
+        with Spectra2Solr(prefix=prefix) as writer:
+            writer.write(substances,
+                         os.path.join(out_folder, f"solr_{index_part}.json"))
+        index_part = index_part + 1
+    return index_part
 
 
-
-if os.path.exists(product["solr_index"]):
-
-    shutil.rmtree(product["solr_index"])
-os.mkdir(product["solr_index"])
+out_folder = product["solr_index"]
+if os.path.exists(out_folder):
+    shutil.rmtree(out_folder)
+os.mkdir(out_folder)
 #nexus_folder2import = upstream["raman_slopp_*"][f"raman_slopp_{dataset}"]["nexus"]
 
 nexus_folder2import = None
@@ -199,7 +202,11 @@ for up in upstream:
         nexus_folder2import = Path(nexus).parent
         break
 
-main(max_substances=0, nexus_folder2import=nexus_folder2import)
+index_part = main(max_substances=10000,
+                  nexus_folder2import=nexus_folder2import,
+                  out_folder=out_folder)
+
+print(index_part)
 
 file_handler.flush()
 file_handler.close()
