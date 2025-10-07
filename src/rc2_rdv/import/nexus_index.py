@@ -4,7 +4,7 @@ from pathlib import Path
 from pyambit.solr_writer import Ambit2Solr
 from pyambit.nexus_parser import Nexus2Ambit
 from pyambit.datamodel import (Substances, EffectRecord, EffectResult,
-                               EffectArray, ValueArray, SubstanceRecord)
+                               EffectArray, ValueArray, ProtocolApplication)
 import nexusformat.nexus as nx
 import ramanchada2 as rc2
 import numpy as np
@@ -12,6 +12,9 @@ import numpy.typing as npt
 import os
 from scipy.interpolate import Akima1DInterpolator
 import shutil
+import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
+from datetime import datetime, timezone
 
 
 # + tags=["parameters"]
@@ -21,6 +24,7 @@ domain = None
 baseline_remove = None
 dataset = None
 prefix = None
+plot_spe = False
 # -
 
 
@@ -70,40 +74,71 @@ class Spectra2Ambit(Nexus2Ambit):
         return rc2.spectrum.Spectrum(x4search, spe_resampled.y / l2_norm)
 
     def parse_effect(self, endpointtype_name, data: nx.NXentry, relative_path: str, nxdefinition:str = None) -> EffectRecord:
-        if nxdefinition != "NXraman":
-            return super().parse_effect( endpointtype_name, data, relative_path, nxdefinition)
-        else:
+        if nxdefinition == "NXraman" or nxdefinition.startswith("/AMBIT_DATAMODEL/P-CHEM/ANALYTICAL_METHODS_SECTION/"):
             if self.index_only:
+                xaxis = None
+                ysignal = None
                 if len(data.nxaxes) == 1:
-                    spe = rc2.spectrum.Spectrum(x=data.nxaxes[0].nxdata, y=data.nxsignal.nxdata)
+                    xaxis = data.nxaxes[0].nxdata
+                    ysignal = data.nxsignal.nxdata
+                    xunit = data.nxaxes[0].attrs["units"]
                 else:
-                    spe = rc2.spectrum.Spectrum(x=data.nxaxes[1].nxdata, y=np.mean(data.nxsignal.nxdata, axis=0))
+                    # replicates as in charisma paper
+                    xaxis = data.nxaxes[1].nxdata
+                    xunit = data.nxaxes[1].attrs["units"]
+                    ysignal = np.mean(data.nxsignal.nxdata, axis=0)
 
-                # ax = spe.plot(label="original")
-                spe_resampled = Spectra2Ambit.preprocess(spe, self.x4search, baseline=baseline_remove)
-                # spe_resampled.plot(label="processed",ax=ax.twinx(),color='red')
-                # ax.set_title(relative_path)
-                # plt.savefig(os.path.join(product["plots"],"{}.png".format(relative_path)))
-                _embeddings = None if np.isnan(spe_resampled.y).any() else spe_resampled.y
+                spe = rc2.spectrum.Spectrum(x=xaxis, y=ysignal)
+                
+                if nxdefinition == "NXraman":
+                    spe_resampled = Spectra2Ambit.preprocess(spe, self.x4search, baseline=baseline_remove)
+                    ysignal = None if np.isnan(spe_resampled.y).any() else spe_resampled.y
+                    xaxis = self.x4search
+                    endpointtype = "embeddings"
+                    endpoint = "spectrum_p1024"
+                    xunit = "cm-1"
+                else:
+                    # Sort by x
+                    sort_idx = np.argsort(xaxis)
+                    x_sorted = xaxis[sort_idx]
+                    y_sorted = ysignal[sort_idx]
+                    # Create linspace grid
+                    x_new = np.linspace(x_sorted.min(), x_sorted.max(), 512)
+                    # Interpolate safely
+                    f = interp1d(x_sorted, y_sorted, kind='linear')
+                    ysignal = f(x_new)
+                    xaxis = x_new
+                    endpointtype = "signal"
+                    endpoint = "dense_b512"
+                    plt.figure(figsize=(8, 5))
+                    plt.plot(x_sorted, y_sorted, 'o-', label='Original Data')
+                    plt.plot(x_new, ysignal, '-', label='Resampled (cubic interp)')
+                    plt.xlabel('x')
+                    plt.ylabel('y')
+                    plt.legend()
+                    plt.title('Resampling of (x, y) onto a uniform grid')
+                    plt.grid(True)
+                    plt.show()
+
                 # print(len(y_resampled),type(y_resampled))
                 return EffectArray(
-                        endpoint="spectrum_p1024",
-                        endpointtype="embeddings",
+                        endpoint=endpoint,
+                        endpointtype=endpointtype,
                         conditions={
                         },
                         result=EffectResult(
                                 textValue="{}/{}#{}".format(self.domain, relative_path, data.nxpath)
                         ),
                         signal=ValueArray(
-                            unit="units",
-                            values=_embeddings,
+                            unit="a.u.",
+                            values=ysignal,
                             errQualifier="Error",
                             errorValue=None
                             # auxiliary={"spectrum_c1024": _embeddings },
                         ),
                         axes={
                             "x": ValueArray(
-                                unit="cm-1", values=self.x4search, errQualifier="Error_x"
+                                unit=xunit, values=xaxis, errQualifier="Error_x"
                             )
                         },
                         axis_groups=None,
@@ -114,9 +149,21 @@ class Spectra2Ambit(Nexus2Ambit):
                     )
             else:
                 raise NotImplementedError("Not implemented")
-
+        else:
+            print("No vectors")
+            return super().parse_effect( endpointtype_name, data, relative_path, nxdefinition)
 
 class Spectra2Solr(Ambit2Solr):
+
+    def __init__(self, prefix: str):
+        super().__init__(prefix)
+
+    def entry2solr(self, papp: ProtocolApplication):
+        if papp.updated is None:
+            timestamp_sec = datetime.now(timezone.utc).timestamp()
+            timestamp_ms = int(timestamp_sec * 1000)
+            papp.updated = timestamp_ms
+        return super().entry2solr(papp)
 
     def effectrecord2solr(self, effect: EffectRecord, solr_index=None ):
         if solr_index is None:
@@ -126,8 +173,15 @@ class Spectra2Solr(Ambit2Solr):
             if effect.result is not None:  #EffectResult
                 self.effectresult2solr(effect.result, solr_index)
             # e.g. vector search
-            if effect.endpointtype == "embeddings":
+            if effect.endpointtype in ["embeddings", "signal"]:
                 if effect.signal.values is not None:
+                    if effect.endpointtype == "signal":
+                        # we need to store the x for preview
+                        for axis in effect.axes:
+                            solr_index[
+                                effect.endpoint.replace("dense_b512", "dense_a512")
+                                ] = effect.axes[axis].values.tolist()
+                            break
                     solr_index[effect.endpoint] = effect.signal.values.tolist()
                 if effect.signal.auxiliary is not None:
                     for aux in effect.signal.auxiliary:
@@ -139,10 +193,10 @@ class Spectra2Solr(Ambit2Solr):
                 self.effectresult2solr(effect.result, solr_index)        
 
 
-def main(max_substances=1000, nexus_folder2import=None, out_folder=None):
-    index_part = 1
+def main(max_substances=1000, nexus_folder2import=None, out_folder=None, start_index=1):
     path = Path(nexus_folder2import)
-    print(path)
+    print(path, start_index)
+    index_part = start_index
     parser: Spectra2Ambit = Spectra2Ambit(domain="/{}".format(domain), index_only=True)
     # parser_all: Nexus2Ambit = Nexus2Ambit(domain="/{}".format(domain), index_only=True)
 
@@ -180,9 +234,10 @@ def main(max_substances=1000, nexus_folder2import=None, out_folder=None):
             index_part = index_part + 1
             parser = Spectra2Ambit(domain="/{}".format(domain), index_only=True)
     # if index_part is still 1, we have not written anything
-    if index_part == 1:
+    if index_part == start_index:
         substances: Substances = parser.get_substances()
         with Spectra2Solr(prefix=prefix) as writer:
+            print(prefix, writer.prefix)
             writer.write(substances,
                          os.path.join(out_folder, f"solr_{index_part}.json"))
         index_part = index_part + 1
@@ -195,18 +250,18 @@ if os.path.exists(out_folder):
 os.mkdir(out_folder)
 #nexus_folder2import = upstream["raman_slopp_*"][f"raman_slopp_{dataset}"]["nexus"]
 
-nexus_folder2import = None
+nexus_folder2import = set([])
 for up in upstream:
-    for tag in upstream[up]:
-        nexus = upstream[up][tag]["nexus"]
-        nexus_folder2import = Path(nexus).parent
-        break
+    if up.endswith("*"):
+        for key in upstream[up]:
+            nexus_folder2import.add(Path(upstream[up][key]["nexus"]).parent)
 
-index_part = main(max_substances=10000,
-                  nexus_folder2import=nexus_folder2import,
-                  out_folder=out_folder)
-
-print(index_part)
+index_part = 1
+for folder in nexus_folder2import:
+    index_part = main(max_substances=10000,
+                    nexus_folder2import=folder,
+                    out_folder=out_folder, start_index=index_part)
+    print(index_part)
 
 file_handler.flush()
 file_handler.close()

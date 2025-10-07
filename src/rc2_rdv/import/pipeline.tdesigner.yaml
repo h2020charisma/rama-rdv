@@ -27,6 +27,7 @@ tasks:
       # nexus_folder2import: "D:\\nina\\DATA\\charisma\\OCEAN_POLYMERS\\nexus"            
       # nexus_folder2import: "D:\\nina\\DATA\\charisma\\ocean\\nexus"  
       baseline_remove: False
+      prefix: "POLY"
 
 
   - source: auth.py
